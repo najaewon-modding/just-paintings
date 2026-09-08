@@ -25,6 +25,8 @@ import java.util.UUID;
 
 public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingEntity, CustomPaintingRenderer.State> {
     private static final Identifier BACK_SPRITE_LOCATION = Identifier.withDefaultNamespace("back");
+    private static final float FRAME = 1.0F / 16.0F;
+    private static final float FRONT_FRAME_Z = -0.03135F;
     private final TextureAtlas paintingsAtlas;
 
     public CustomPaintingRenderer(EntityRendererProvider.Context context) {
@@ -72,7 +74,7 @@ public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingE
         TextureAtlasSprite backSprite = paintingsAtlas.getSprite(BACK_SPRITE_LOCATION);
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - state.direction.get2DDataValue() * 90.0F));
-        collector.submitCustomGeometry(poseStack, RenderTypes.entitySolidZOffsetForward(backSprite.atlasLocation()), (pose, buffer) -> renderBackAndEdges(pose, buffer, state.lightCoordsPerBlock, state.width, state.height, backSprite));
+        collector.submitCustomGeometry(poseStack, RenderTypes.entitySolidZOffsetForward(backSprite.atlasLocation()), (pose, buffer) -> renderBackEdgesAndFrame(pose, buffer, state.lightCoordsPerBlock, state.width, state.height, backSprite));
         collector.submitCustomGeometry(poseStack, RenderTypes.entitySolidZOffsetForward(frontTexture), (pose, buffer) -> renderFront(pose, buffer, state.lightCoordsPerBlock, state.width, state.height));
         poseStack.popPose();
         super.submit(state, poseStack, collector, cameraState);
@@ -100,7 +102,7 @@ public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingE
         }
     }
 
-    private static void renderBackAndEdges(PoseStack.Pose pose, VertexConsumer buffer, int[] lights, int width, int height, TextureAtlasSprite back) {
+    private static void renderBackEdgesAndFrame(PoseStack.Pose pose, VertexConsumer buffer, int[] lights, int width, int height, TextureAtlasSprite back) {
         float offsetX = -width / 2.0F;
         float offsetY = -height / 2.0F;
         float backU0 = back.getU0();
@@ -131,27 +133,42 @@ public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingE
                     vertex(pose, buffer, x1, y0, topBottomU1, topBottomV0, -0.03125F, 0, 1, 0, light);
                     vertex(pose, buffer, x1, y0, topBottomU1, topBottomV1, 0.03125F, 0, 1, 0, light);
                     vertex(pose, buffer, x0, y0, topBottomU0, topBottomV1, 0.03125F, 0, 1, 0, light);
+                    frontFrameQuad(pose, buffer, x1, x0, y0 - FRAME, y0, light, back);
                 }
                 if (segmentY == 0) {
                     vertex(pose, buffer, x0, y1, topBottomU0, topBottomV0, 0.03125F, 0, -1, 0, light);
                     vertex(pose, buffer, x1, y1, topBottomU1, topBottomV0, 0.03125F, 0, -1, 0, light);
                     vertex(pose, buffer, x1, y1, topBottomU1, topBottomV1, -0.03125F, 0, -1, 0, light);
                     vertex(pose, buffer, x0, y1, topBottomU0, topBottomV1, -0.03125F, 0, -1, 0, light);
+                    frontFrameQuad(pose, buffer, x1, x0, y1, y1 + FRAME, light, back);
                 }
                 if (segmentX == width - 1) {
                     vertex(pose, buffer, x0, y0, leftRightU1, leftRightV0, 0.03125F, -1, 0, 0, light);
                     vertex(pose, buffer, x0, y1, leftRightU1, leftRightV1, 0.03125F, -1, 0, 0, light);
                     vertex(pose, buffer, x0, y1, leftRightU0, leftRightV1, -0.03125F, -1, 0, 0, light);
                     vertex(pose, buffer, x0, y0, leftRightU0, leftRightV0, -0.03125F, -1, 0, 0, light);
+                    frontFrameQuad(pose, buffer, x0 - FRAME, x0, y1, y0, light, back);
                 }
                 if (segmentX == 0) {
                     vertex(pose, buffer, x1, y0, leftRightU1, leftRightV0, -0.03125F, 1, 0, 0, light);
                     vertex(pose, buffer, x1, y1, leftRightU1, leftRightV1, -0.03125F, 1, 0, 0, light);
                     vertex(pose, buffer, x1, y1, leftRightU0, leftRightV1, 0.03125F, 1, 0, 0, light);
                     vertex(pose, buffer, x1, y0, leftRightU0, leftRightV0, 0.03125F, 1, 0, 0, light);
+                    frontFrameQuad(pose, buffer, x1, x1 + FRAME, y1, y0, light, back);
                 }
             }
         }
+    }
+
+    private static void frontFrameQuad(PoseStack.Pose pose, VertexConsumer buffer, float x1, float x0, float y1, float y0, int light, TextureAtlasSprite texture) {
+        float u0 = texture.getU0();
+        float u1 = texture.getU1();
+        float v0 = texture.getV0();
+        float v1 = texture.getV1();
+        vertex(pose, buffer, x0, y1, u1, v0, FRONT_FRAME_Z, 0, 0, -1, light);
+        vertex(pose, buffer, x1, y1, u0, v0, FRONT_FRAME_Z, 0, 0, -1, light);
+        vertex(pose, buffer, x1, y0, u0, v1, FRONT_FRAME_Z, 0, 0, -1, light);
+        vertex(pose, buffer, x0, y0, u1, v1, FRONT_FRAME_Z, 0, 0, -1, light);
     }
 
     private static void vertex(PoseStack.Pose pose, VertexConsumer buffer, float x, float y, float u, float v, float z, int nx, int ny, int nz, int light) {
