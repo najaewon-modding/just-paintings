@@ -7,6 +7,7 @@ import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.njw.justpaintings.JustPaintings;
 import net.njw.justpaintings.network.PaintingPayloads;
+import net.njw.justpaintings.network.UploadPayloads;
 import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
@@ -21,6 +22,7 @@ public final class ClientPaintingTextures {
     private static final Map<UUID, Identifier> TEXTURES = new HashMap<>();
     private static final Map<UUID, Download> DOWNLOADS = new HashMap<>();
     private static final Set<UUID> REQUESTED = new HashSet<>();
+    private static final Set<UUID> MISSING = new HashSet<>();
 
     private ClientPaintingTextures() {
     }
@@ -28,14 +30,20 @@ public final class ClientPaintingTextures {
     public static @Nullable Identifier getOrRequest(UUID imageId) {
         Identifier texture = TEXTURES.get(imageId);
         if (texture != null) return texture;
-        if (imageId.getMostSignificantBits() != 0L || imageId.getLeastSignificantBits() != 0L) {
-            if (REQUESTED.add(imageId)) ClientPacketDistributor.sendToServer(new PaintingPayloads.RequestImagePayload(imageId));
+        if (MISSING.contains(imageId)) return null;
+        if ((imageId.getMostSignificantBits() != 0L || imageId.getLeastSignificantBits() != 0L) && REQUESTED.add(imageId)) {
+            ClientPacketDistributor.sendToServer(new PaintingPayloads.RequestImagePayload(imageId));
         }
         return null;
     }
 
     public static void start(PaintingPayloads.ImageStartPayload payload) {
-        if (payload.totalSize() < 1 || payload.totalSize() > 16 * 1024 * 1024) return;
+        if (MISSING.contains(payload.imageId())) return;
+        if (payload.totalSize() < 1 || payload.totalSize() > UploadPayloads.MAX_UPLOAD_SIZE) {
+            DOWNLOADS.remove(payload.imageId());
+            REQUESTED.remove(payload.imageId());
+            return;
+        }
         DOWNLOADS.put(payload.imageId(), new Download(payload.totalSize()));
     }
 
@@ -45,6 +53,10 @@ public final class ClientPaintingTextures {
     }
 
     public static void finish(PaintingPayloads.ImageFinishPayload payload) {
+        if (MISSING.contains(payload.imageId())) {
+            DOWNLOADS.remove(payload.imageId());
+            return;
+        }
         Download download = DOWNLOADS.remove(payload.imageId());
         if (download == null || download.data.size() != download.totalSize) {
             REQUESTED.remove(payload.imageId());
@@ -64,7 +76,8 @@ public final class ClientPaintingTextures {
 
     public static void remove(PaintingPayloads.ImageRemovedPayload payload) {
         DOWNLOADS.remove(payload.imageId());
-        REQUESTED.add(payload.imageId());
+        REQUESTED.remove(payload.imageId());
+        MISSING.add(payload.imageId());
         Identifier texture = TEXTURES.remove(payload.imageId());
         if (texture != null) Minecraft.getInstance().getTextureManager().release(texture);
     }
@@ -75,7 +88,7 @@ public final class ClientPaintingTextures {
 
         private Download(int totalSize) {
             this.totalSize = totalSize;
-            this.data = new ByteArrayOutputStream(totalSize);
+            this.data = new ByteArrayOutputStream(Math.min(totalSize, PaintingPayloads.MAX_IMAGE_CHUNK_SIZE));
         }
 
         private boolean append(byte[] bytes) {
