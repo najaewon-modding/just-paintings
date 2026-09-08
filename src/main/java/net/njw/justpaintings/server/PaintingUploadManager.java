@@ -21,6 +21,9 @@ import net.njw.justpaintings.network.UploadPayloads;
 import net.njw.justpaintings.registry.ModContent;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -33,6 +36,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -42,13 +46,14 @@ public final class PaintingUploadManager {
     private static final Map<UploadKey, UploadSession> SESSIONS = new HashMap<>();
     private static final int MAX_UPLOADS_PER_PLAYER = 10;
     private static final int MAX_UPLOADS_SERVER = 100;
+    private static final int MAX_STORED_IMAGE_DIMENSION = 4096;
 
     private PaintingUploadManager() {
     }
 
     public static void handleStart(UploadPayloads.UploadStartPayload payload, IPayloadContext context) {
         ServerPlayer player = (ServerPlayer) context.player();
-        if (payload.width() < 1 || payload.width() > 3 || payload.height() < 1 || payload.height() > 3) {
+        if (!validDimensions(payload.width(), payload.height())) {
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.invalid_dimensions"));
             return;
         }
@@ -118,25 +123,26 @@ public final class PaintingUploadManager {
 
     private static void sendChoices(ServerPlayer player, InteractionHand hand, boolean selectable) {
         try {
-            List<StoredPainting> paintings = readPaintings(player.level().getServer());
-            List<PaintingPayloads.Choice> choices = paintings.stream()
-                    .filter(p -> p.stored() && p.width() >= 1 && p.width() <= 3 && p.height() >= 1 && p.height() <= 3)
-                    .map(p -> new PaintingPayloads.Choice(p.id(), p.displayFileName(), p.width(), p.height(), p.uploader(), player.getUUID().toString().equals(p.uploaderUuid())))
+            String playerId = player.getUUID().toString();
+            List<PaintingPayloads.Choice> choices = readPaintings(player.level().getServer()).stream()
+                    .filter(p -> p.stored() && validDimensions(p.width(), p.height()))
+                    .map(p -> new PaintingPayloads.Choice(p.id(), p.displayFileName(), p.width(), p.height(), p.uploader(), playerId.equals(p.uploaderUuid())))
                     .toList();
             PacketDistributor.sendToPlayer(player, new PaintingPayloads.PaintingChoicesPayload(hand == InteractionHand.MAIN_HAND ? 0 : 1, selectable, choices));
         } catch (IOException e) {
-            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.selection.failed"));
+            player.sendSystemMessage(Component.translatable(selectable ? "message.njw_just_paintings.selection.failed" : "command.njw_just_paintings.list.failed"));
         }
     }
 
     public static void handleSelection(PaintingPayloads.SelectPaintingPayload payload, IPayloadContext context) {
+        if (payload.hand() > 1) return;
         ServerPlayer player = (ServerPlayer) context.player();
         InteractionHand hand = payload.hand() == 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
         ItemStack stack = player.getItemInHand(hand);
         if (stack.getItem() != ModContent.CUSTOM_PAINTING.get() || PaintingItemData.isSelected(stack)) return;
         try {
             StoredPainting painting = findPainting(player.level().getServer(), payload.imageId());
-            if (painting == null || !painting.stored() || painting.width() < 1 || painting.width() > 3 || painting.height() < 1 || painting.height() > 3) {
+            if (painting == null || !painting.stored() || !validDimensions(painting.width(), painting.height())) {
                 player.sendSystemMessage(Component.translatable("message.njw_just_paintings.selection.failed"));
                 return;
             }
@@ -148,11 +154,17 @@ public final class PaintingUploadManager {
     }
 
     public static void handleDeletion(PaintingPayloads.DeletePaintingPayload payload, IPayloadContext context) {
+        if (payload.hand() > 1) return;
         ServerPlayer player = (ServerPlayer) context.player();
         InteractionHand hand = payload.hand() == 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
         try {
             StoredPainting painting = findPainting(player.level().getServer(), payload.imageId());
-            if (painting == null || !player.getUUID().toString().equals(painting.uploaderUuid())) {
+            if (painting == null) {
+                player.sendSystemMessage(Component.translatable("message.njw_just_paintings.delete.failed"));
+                sendChoices(player, hand, payload.selectable());
+                return;
+            }
+            if (!player.getUUID().toString().equals(painting.uploaderUuid())) {
                 player.sendSystemMessage(Component.translatable("message.njw_just_paintings.delete.denied"));
                 sendChoices(player, hand, payload.selectable());
                 return;
@@ -172,7 +184,7 @@ public final class PaintingUploadManager {
         try {
             StoredPainting painting = findPainting(player.level().getServer(), payload.imageId());
             if (painting == null || !painting.stored()) return;
-            Path imagePath = root(player.level().getServer()).resolve("images").resolve(painting.storedFileName());
+            Path imagePath = imagePath(root(player.level().getServer()), painting.storedFileName());
             byte[] data = Files.readAllBytes(imagePath);
             if (data.length < 1 || data.length > UploadPayloads.MAX_UPLOAD_SIZE) return;
             PacketDistributor.sendToPlayer(player, new PaintingPayloads.ImageStartPayload(painting.id(), data.length));
@@ -194,9 +206,14 @@ public final class PaintingUploadManager {
         }
     }
 
+    private static boolean validDimensions(int width, int height) {
+        return width >= 1 && width <= 3 && height >= 1 && height <= 3;
+    }
+
     private static UploadLimit getUploadLimit(ServerPlayer player) throws IOException {
         List<StoredPainting> paintings = readPaintings(player.level().getServer());
-        long playerCount = paintings.stream().filter(StoredPainting::stored).filter(p -> player.getUUID().toString().equals(p.uploaderUuid())).count();
+        String playerId = player.getUUID().toString();
+        long playerCount = paintings.stream().filter(StoredPainting::stored).filter(p -> playerId.equals(p.uploaderUuid())).count();
         if (playerCount >= MAX_UPLOADS_PER_PLAYER) return new UploadLimit("message.njw_just_paintings.upload.limit.player", MAX_UPLOADS_PER_PLAYER);
         long serverCount = paintings.stream().filter(StoredPainting::stored).count();
         if (serverCount >= MAX_UPLOADS_SERVER) return new UploadLimit("message.njw_just_paintings.upload.limit.server", MAX_UPLOADS_SERVER);
@@ -204,27 +221,58 @@ public final class PaintingUploadManager {
     }
 
     private static String save(ServerPlayer player, UploadSession session) throws IOException {
-        byte[] bytes = session.data.toByteArray();
-        BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
-        if (image == null) throw new IOException("Unsupported image file");
+        DecodedImage decoded = decodeImage(session.data.toByteArray());
+        BufferedImage image = decoded.image();
         Path root = root(player.level().getServer());
         Path images = root.resolve("images");
         Files.createDirectories(images);
         UUID imageId = UUID.randomUUID();
         String storedFileName = imageId + ".png";
-        Path imagePath = images.resolve(storedFileName);
+        Path imagePath = imagePath(root, storedFileName);
         Path tempImagePath = images.resolve(storedFileName + ".tmp");
-        if (!ImageIO.write(image, "PNG", tempImagePath.toFile())) throw new IOException("Could not encode PNG");
-        moveAtomically(tempImagePath, imagePath);
+        boolean moved = false;
         try {
-            appendMetadata(root.resolve("metadata.json"), imageId, storedFileName, session, player, image.getWidth(), image.getHeight());
+            if (!ImageIO.write(image, "PNG", tempImagePath.toFile())) throw new IOException("Could not encode PNG");
+            moveAtomically(tempImagePath, imagePath);
+            moved = true;
+            appendMetadata(root.resolve("metadata.json"), imageId, storedFileName, session, player, decoded.sourceWidth(), decoded.sourceHeight());
             StoredPainting storedPainting = findPainting(player.level().getServer(), imageId);
             return storedPainting != null ? storedPainting.displayFileName() : session.fileName;
         } catch (Exception e) {
-            Files.deleteIfExists(imagePath);
+            if (moved) Files.deleteIfExists(imagePath);
             if (e instanceof IOException ioException) throw ioException;
-            throw new IOException("Could not save metadata", e);
+            throw new IOException("Could not save painting", e);
+        } finally {
+            image.flush();
+            Files.deleteIfExists(tempImagePath);
         }
+    }
+
+    private static DecodedImage decodeImage(byte[] bytes) throws IOException {
+        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+            if (input == null) throw new IOException("Unsupported image file");
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+            if (!readers.hasNext()) throw new IOException("Unsupported image file");
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(input, true, true);
+                int sourceWidth = reader.getWidth(0);
+                int sourceHeight = reader.getHeight(0);
+                if (sourceWidth < 1 || sourceHeight < 1) throw new IOException("Invalid image dimensions");
+                int sample = Math.max(subsampling(sourceWidth), subsampling(sourceHeight));
+                ImageReadParam param = reader.getDefaultReadParam();
+                if (sample > 1) param.setSourceSubsampling(sample, sample, 0, 0);
+                BufferedImage image = reader.read(0, param);
+                if (image == null) throw new IOException("Unsupported image file");
+                return new DecodedImage(image, sourceWidth, sourceHeight);
+            } finally {
+                reader.dispose();
+            }
+        }
+    }
+
+    private static int subsampling(int dimension) {
+        return Math.max(1, 1 + (dimension - 1) / MAX_STORED_IMAGE_DIMENSION);
     }
 
     private static List<StoredPainting> readPaintings(MinecraftServer server) throws IOException {
@@ -248,7 +296,13 @@ public final class PaintingUploadManager {
                 UUID id = UUID.fromString(idText);
                 int occurrence = nameCounts.merge(fileName, 1, Integer::sum);
                 String displayFileName = occurrence == 1 ? fileName : fileName + " (" + occurrence + ")";
-                boolean stored = !storedFileName.isBlank() && Files.isRegularFile(root.resolve("images").resolve(storedFileName));
+                boolean stored = false;
+                if (!storedFileName.isBlank()) {
+                    try {
+                        stored = Files.isRegularFile(imagePath(root, storedFileName));
+                    } catch (IOException ignored) {
+                    }
+                }
                 result.add(new StoredPainting(id, fileName, displayFileName, storedFileName, uploaderUuid, uploader, width, height, stored));
             } catch (IllegalArgumentException ignored) {
             }
@@ -263,6 +317,7 @@ public final class PaintingUploadManager {
 
     private static void deletePainting(MinecraftServer server, UUID id, String storedFileName) throws IOException {
         Path root = root(server);
+        Path storedPath = storedFileName.isBlank() ? null : imagePath(root, storedFileName);
         Path metadataPath = root.resolve("metadata.json");
         JsonArray entries = readMetadata(metadataPath);
         JsonArray remaining = new JsonArray();
@@ -276,11 +331,18 @@ public final class PaintingUploadManager {
         }
         if (!found) throw new IOException("Painting metadata not found");
         writeMetadata(metadataPath, remaining);
-        if (!storedFileName.isBlank()) Files.deleteIfExists(root.resolve("images").resolve(storedFileName));
+        if (storedPath != null) Files.deleteIfExists(storedPath);
     }
 
     private static Path root(MinecraftServer server) {
         return server.getWorldPath(LevelResource.ROOT).resolve(JustPaintings.MOD_ID);
+    }
+
+    private static Path imagePath(Path root, String storedFileName) throws IOException {
+        Path images = root.resolve("images").normalize();
+        Path image = images.resolve(storedFileName).normalize();
+        if (!images.equals(image.getParent())) throw new IOException("Invalid stored image path");
+        return image;
     }
 
     private static void appendMetadata(Path metadataPath, UUID imageId, String storedFileName, UploadSession session, ServerPlayer player, int sourceWidth, int sourceHeight) throws IOException {
@@ -306,6 +368,8 @@ public final class PaintingUploadManager {
             JsonElement existing = JsonParser.parseReader(reader);
             if (!existing.isJsonArray()) throw new IOException("Invalid metadata format");
             return existing.getAsJsonArray();
+        } catch (RuntimeException e) {
+            throw new IOException("Invalid metadata format", e);
         }
     }
 
@@ -327,17 +391,28 @@ public final class PaintingUploadManager {
     private static String sanitizeFileName(String fileName) {
         String normalized = fileName.replace('\\', '/');
         int slash = normalized.lastIndexOf('/');
-        return (slash >= 0 ? normalized.substring(slash + 1) : normalized).strip();
+        String baseName = (slash >= 0 ? normalized.substring(slash + 1) : normalized).strip();
+        StringBuilder sanitized = new StringBuilder(baseName.length());
+        baseName.codePoints().filter(cp -> !Character.isISOControl(cp)).forEach(sanitized::appendCodePoint);
+        return sanitized.toString().strip();
     }
 
     private static String stringValue(JsonObject object, String key, String fallback) {
         JsonElement value = object.get(key);
-        return value != null && value.isJsonPrimitive() ? value.getAsString() : fallback;
+        try {
+            return value != null && value.isJsonPrimitive() ? value.getAsString() : fallback;
+        } catch (RuntimeException e) {
+            return fallback;
+        }
     }
 
     private static int intValue(JsonObject object, String key, int fallback) {
         JsonElement value = object.get(key);
-        return value != null && value.isJsonPrimitive() ? value.getAsInt() : fallback;
+        try {
+            return value != null && value.isJsonPrimitive() ? value.getAsInt() : fallback;
+        } catch (RuntimeException e) {
+            return fallback;
+        }
     }
 
     public record StoredPainting(UUID id, String fileName, String displayFileName, String storedFileName, String uploaderUuid, String uploader, int width, int height, boolean stored) {
@@ -347,6 +422,9 @@ public final class PaintingUploadManager {
     }
 
     private record UploadLimit(String translationKey, int maximum) {
+    }
+
+    private record DecodedImage(BufferedImage image, int sourceWidth, int sourceHeight) {
     }
 
     private static final class UploadSession {
@@ -361,7 +439,7 @@ public final class PaintingUploadManager {
             this.width = width;
             this.height = height;
             this.totalSize = totalSize;
-            this.data = new ByteArrayOutputStream(totalSize);
+            this.data = new ByteArrayOutputStream(Math.min(totalSize, UploadPayloads.MAX_CHUNK_SIZE));
         }
 
         private boolean append(byte[] chunk) {
