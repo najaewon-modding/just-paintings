@@ -51,7 +51,7 @@ public final class CustomPaintingItem extends Item {
         if (selection == null) return InteractionResult.FAIL;
         if (!(context.getLevel() instanceof ServerLevel level)) return InteractionResult.SUCCESS;
         BlockPos clickedTopLeft = context.getClickedPos().relative(face);
-        CustomPaintingEntity entity = findPlacement(level, clickedTopLeft, face, selection);
+        CustomPaintingEntity entity = findPlacement(level, player, stack, clickedTopLeft, face, selection);
         if (entity == null) {
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.placement.failed"));
             return InteractionResult.FAIL;
@@ -63,19 +63,26 @@ public final class CustomPaintingItem extends Item {
         return InteractionResult.SUCCESS_SERVER;
     }
 
-    private static @Nullable CustomPaintingEntity findPlacement(ServerLevel level, BlockPos clickedTopLeft, Direction face, PaintingItemData.Selection selection) {
-        Direction left = face.getCounterClockWise().getOpposite();
+    private static @Nullable CustomPaintingEntity findPlacement(ServerLevel level, Player player, ItemStack stack, BlockPos clickedTopLeft, Direction face, PaintingItemData.Selection selection) {
+        Direction screenLeft = face.getClockWise();
         int maxDistance = selection.width() + selection.height() - 2;
         for (int distance = 0; distance <= maxDistance; distance++) {
             int maxUp = Math.min(distance, selection.height() - 1);
             for (int shiftUp = maxUp; shiftUp >= 0; shiftUp--) {
                 int shiftLeft = distance - shiftUp;
                 if (shiftLeft >= selection.width()) continue;
-                BlockPos topLeft = clickedTopLeft.above(shiftUp).relative(left, shiftLeft);
-                CustomPaintingEntity candidate = new CustomPaintingEntity(level, topLeft, face, selection);
+                BlockPos topLeft = clickedTopLeft.above(shiftUp).relative(screenLeft, shiftLeft);
+                BlockPos anchor = anchorFromTopLeft(topLeft, face, selection.width(), selection.height());
+                if (!player.mayUseItemAt(anchor, face, stack)) continue;
+                CustomPaintingEntity candidate = new CustomPaintingEntity(level, anchor, face, selection);
                 if (candidate.survives()) return candidate;
             }
         }
         return null;
+    }
+
+    private static BlockPos anchorFromTopLeft(BlockPos topLeft, Direction face, int width, int height) {
+        Direction screenRight = face.getCounterClockWise();
+        return topLeft.relative(screenRight, (width - 1) / 2).below(height / 2);
     }
 }
