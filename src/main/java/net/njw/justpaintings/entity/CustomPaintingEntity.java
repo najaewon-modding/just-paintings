@@ -11,21 +11,16 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.njw.justpaintings.item.PaintingItemData;
 import net.njw.justpaintings.registry.ModContent;
@@ -38,15 +33,14 @@ public final class CustomPaintingEntity extends HangingEntity {
     private static final EntityDataAccessor<String> FILE_NAME = SynchedEntityData.defineId(CustomPaintingEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> WIDTH = SynchedEntityData.defineId(CustomPaintingEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> HEIGHT = SynchedEntityData.defineId(CustomPaintingEntity.class, EntityDataSerializers.INT);
+    public static final float DEPTH = 0.0625F;
 
     public CustomPaintingEntity(EntityType<? extends CustomPaintingEntity> type, Level level) {
         super(type, level);
-        blocksBuilding = true;
     }
 
-    public CustomPaintingEntity(Level level, BlockPos topLeft, Direction direction, PaintingItemData.Selection selection) {
-        super(ModContent.CUSTOM_PAINTING_ENTITY.get(), level, topLeft);
-        blocksBuilding = true;
+    public CustomPaintingEntity(Level level, BlockPos anchor, Direction direction, PaintingItemData.Selection selection) {
+        super(ModContent.CUSTOM_PAINTING_ENTITY.get(), level, anchor);
         entityData.set(IMAGE_ID, selection.imageId().toString());
         entityData.set(FILE_NAME, selection.fileName());
         entityData.set(WIDTH, selection.width());
@@ -89,66 +83,35 @@ public final class CustomPaintingEntity extends HangingEntity {
         return Math.clamp(entityData.get(HEIGHT), 1, 3);
     }
 
-    private Direction right() {
-        return getDirection().getCounterClockWise();
+    @Override
+    protected AABB calculateBoundingBox(BlockPos pos, Direction direction) {
+        Vec3 attachedToWall = Vec3.atCenterOf(pos).relative(direction, -0.46875);
+        double horizontalOffset = offsetForPaintingSize(getPaintingWidth());
+        double verticalOffset = offsetForPaintingSize(getPaintingHeight());
+        Direction left = direction.getCounterClockWise();
+        Vec3 position = attachedToWall.relative(left, horizontalOffset).relative(Direction.UP, verticalOffset);
+        Direction.Axis axis = direction.getAxis();
+        double xSize = axis == Direction.Axis.X ? DEPTH : getPaintingWidth();
+        double ySize = getPaintingHeight();
+        double zSize = axis == Direction.Axis.Z ? DEPTH : getPaintingWidth();
+        return AABB.ofSize(position, xSize, ySize, zSize);
     }
 
-    private BlockPos cell(int x, int y) {
-        return getPos().relative(right(), x).below(y);
+    private static double offsetForPaintingSize(int size) {
+        return size % 2 == 0 ? 0.5 : 0.0;
     }
 
     @Override
-    protected AABB calculateBoundingBox(BlockPos topLeft, Direction direction) {
-        Direction right = direction.getCounterClockWise();
-        Vec3 center = Vec3.atCenterOf(topLeft)
-                .relative(direction.getOpposite(), 0.46875)
-                .add(right.getStepX() * (getPaintingWidth() - 1) * 0.5, -(getPaintingHeight() - 1) * 0.5, right.getStepZ() * (getPaintingWidth() - 1) * 0.5);
-        double sizeX = direction.getAxis() == Direction.Axis.Z ? getPaintingWidth() : 0.0625;
-        double sizeZ = direction.getAxis() == Direction.Axis.X ? getPaintingWidth() : 0.0625;
-        return AABB.ofSize(center, sizeX, getPaintingHeight(), sizeZ);
-    }
-
-    @Override
-    public boolean survives() {
-        if (getDirection().getAxis() == Direction.Axis.Y) return false;
-        boolean hasSupport = false;
-        for (int y = 0; y < getPaintingHeight(); y++) {
-            for (int x = 0; x < getPaintingWidth(); x++) {
-                BlockPos front = cell(x, y);
-                if (!level().getBlockState(front).isAir()) return false;
-                if (!level().getBlockState(front.relative(getDirection().getOpposite())).isAir()) hasSupport = true;
-            }
-        }
-        if (!hasSupport) return false;
-        return level().getEntities(this, getBoundingBox().deflate(1.0E-4)).stream().noneMatch(entity -> entity instanceof HangingEntity);
-    }
-
-    @Override
-    public InteractionResult interact(Player player, InteractionHand hand, Vec3 location) {
-        ItemStack stack = player.getItemInHand(hand);
-        if (!(stack.getItem() instanceof BlockItem blockItem)) return super.interact(player, hand, location);
-        Vec3 worldHit = position().add(location);
-        BlockPos paintingCell = BlockPos.containing(worldHit.relative(getDirection(), 0.25));
-        BlockPos target = paintingCell.relative(getDirection());
-        if (!player.mayUseItemAt(target, getDirection(), stack)) return InteractionResult.FAIL;
-        if (level().isClientSide()) return InteractionResult.SUCCESS;
-        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(target), getDirection(), target, false);
-        return blockItem.place(new BlockPlaceContext(player, hand, stack, hit));
+    public void dropItem(ServerLevel level, @Nullable Entity causedBy) {
+        if (!level.getGameRules().get(GameRules.ENTITY_DROPS)) return;
+        playSound(SoundEvents.PAINTING_BREAK, 1.0F, 1.0F);
+        if (causedBy instanceof Player player && player.hasInfiniteMaterials()) return;
+        spawnAtLocation(level, createPaintingStack());
     }
 
     @Override
     public void playPlacementSound() {
         playSound(SoundEvents.PAINTING_PLACE, 1.0F, 1.0F);
-    }
-
-    @Override
-    public void dropItem(ServerLevel level, @Nullable Entity breaker) {
-        if (!level.getGameRules().get(GameRules.ENTITY_DROPS)) return;
-        playSound(SoundEvents.PAINTING_BREAK, 1.0F, 1.0F);
-        if (breaker instanceof Player player && player.hasInfiniteMaterials()) return;
-        ItemStack stack = new ItemStack(ModContent.CUSTOM_PAINTING.get());
-        PaintingItemData.set(stack, getImageId(), getFileName(), getPaintingWidth(), getPaintingHeight());
-        spawnAtLocation(level, stack, 0.0F);
     }
 
     @Override
@@ -173,22 +136,34 @@ public final class CustomPaintingEntity extends HangingEntity {
     }
 
     @Override
+    public ItemStack getPickResult() {
+        return createPaintingStack();
+    }
+
+    private ItemStack createPaintingStack() {
+        ItemStack stack = new ItemStack(ModContent.CUSTOM_PAINTING.get());
+        PaintingItemData.set(stack, getImageId(), getFileName(), getPaintingWidth(), getPaintingHeight());
+        return stack;
+    }
+
+    @Override
     protected void addAdditionalSaveData(ValueOutput output) {
+        output.store("facing", Direction.LEGACY_ID_CODEC_2D, getDirection());
         super.addAdditionalSaveData(output);
         output.putString("PaintingImageId", entityData.get(IMAGE_ID));
         output.putString("PaintingFileName", entityData.get(FILE_NAME));
         output.putInt("PaintingWidth", getPaintingWidth());
         output.putInt("PaintingHeight", getPaintingHeight());
-        output.putInt("PaintingFacing", getDirection().get2DDataValue());
     }
 
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
+        Direction direction = input.read("facing", Direction.LEGACY_ID_CODEC_2D).orElse(Direction.SOUTH);
         super.readAdditionalSaveData(input);
         entityData.set(IMAGE_ID, input.getStringOr("PaintingImageId", ""));
         entityData.set(FILE_NAME, input.getStringOr("PaintingFileName", ""));
         entityData.set(WIDTH, Math.clamp(input.getIntOr("PaintingWidth", 1), 1, 3));
         entityData.set(HEIGHT, Math.clamp(input.getIntOr("PaintingHeight", 1), 1, 3));
-        setDirection(Direction.from2DDataValue(Math.floorMod(input.getIntOr("PaintingFacing", Direction.SOUTH.get2DDataValue()), 4)));
+        setDirection(direction);
     }
 }
