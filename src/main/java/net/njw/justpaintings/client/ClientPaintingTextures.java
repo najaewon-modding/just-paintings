@@ -3,11 +3,11 @@ package net.njw.justpaintings.client;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.njw.justpaintings.JustPaintings;
 import net.njw.justpaintings.network.PaintingPayloads;
+import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -25,13 +25,13 @@ public final class ClientPaintingTextures {
     private ClientPaintingTextures() {
     }
 
-    public static Identifier getOrRequest(UUID imageId) {
+    public static @Nullable Identifier getOrRequest(UUID imageId) {
         Identifier texture = TEXTURES.get(imageId);
         if (texture != null) return texture;
         if (imageId.getMostSignificantBits() != 0L || imageId.getLeastSignificantBits() != 0L) {
             if (REQUESTED.add(imageId)) ClientPacketDistributor.sendToServer(new PaintingPayloads.RequestImagePayload(imageId));
         }
-        return MissingTextureAtlasSprite.getLocation();
+        return null;
     }
 
     public static void start(PaintingPayloads.ImageStartPayload payload) {
