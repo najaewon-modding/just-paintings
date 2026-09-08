@@ -17,6 +17,8 @@ import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.DiodeBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -104,6 +106,16 @@ public final class CustomPaintingEntity extends HangingEntity {
 
     private static double offsetForPaintingSize(int size) {
         return size % 2 == 0 ? 0.5 : 0.0;
+    }
+
+    @Override
+    public boolean survives() {
+        if (hasLevelCollision(getPopBox())) return false;
+        boolean supported = BlockPos.betweenClosedStream(calculateSupportBox()).anyMatch(pos -> {
+            BlockState state = level().getBlockState(pos);
+            return state.isSolid() || DiodeBlock.isDiode(state);
+        });
+        return supported && canCoexist(false);
     }
 
     @Override
