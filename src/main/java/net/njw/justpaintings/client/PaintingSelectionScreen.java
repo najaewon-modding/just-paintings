@@ -20,12 +20,14 @@ public final class PaintingSelectionScreen extends Screen {
     private static final int CONTROL_BOTTOM_MARGIN = 12;
     private static final int CONTROL_GAP = 10;
     private final int hand;
+    private final boolean selectable;
     private final List<PaintingPayloads.Choice> choices;
     private int firstVisible;
 
-    public PaintingSelectionScreen(int hand, List<PaintingPayloads.Choice> choices) {
-        super(Component.translatable("screen.njw_just_paintings.selection.title"));
+    public PaintingSelectionScreen(int hand, boolean selectable, List<PaintingPayloads.Choice> choices) {
+        super(Component.translatable(selectable ? "screen.njw_just_paintings.selection.title" : "screen.njw_just_paintings.list.title"));
         this.hand = hand;
+        this.selectable = selectable;
         this.choices = List.copyOf(choices);
     }
 
@@ -67,11 +69,11 @@ public final class PaintingSelectionScreen extends Screen {
             PaintingPayloads.Choice choice = choices.get(i);
             int deleteX = layout.x + layout.panelWidth - DELETE_WIDTH;
             if (choice.deletable() && inside(mouseX, mouseY, deleteX, rowY, DELETE_WIDTH, ROW_HEIGHT)) {
-                ClientPacketDistributor.sendToServer(new PaintingPayloads.DeletePaintingPayload(hand, choice.id()));
+                ClientPacketDistributor.sendToServer(new PaintingPayloads.DeletePaintingPayload(hand, selectable, choice.id()));
                 return true;
             }
             if (inside(mouseX, mouseY, layout.x, rowY, layout.panelWidth, ROW_HEIGHT)) {
-                select(choice);
+                if (selectable) select(choice);
                 return true;
             }
         }
