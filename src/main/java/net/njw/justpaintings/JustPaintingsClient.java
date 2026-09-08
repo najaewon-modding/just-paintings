@@ -50,6 +50,7 @@ public final class JustPaintingsClient {
         event.register(PaintingPayloads.ImageStartPayload.TYPE, (payload, context) -> ClientPaintingTextures.start(payload));
         event.register(PaintingPayloads.ImageChunkPayload.TYPE, (payload, context) -> ClientPaintingTextures.chunk(payload));
         event.register(PaintingPayloads.ImageFinishPayload.TYPE, (payload, context) -> ClientPaintingTextures.finish(payload));
+        event.register(PaintingPayloads.ImageRemovedPayload.TYPE, (payload, context) -> ClientPaintingTextures.remove(payload));
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
