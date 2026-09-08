@@ -1,5 +1,6 @@
 package net.njw.justpaintings.item;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -9,12 +10,16 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.njw.justpaintings.entity.CustomPaintingEntity;
 import net.njw.justpaintings.server.PaintingUploadManager;
 import org.jspecify.annotations.Nullable;
+
+import java.util.function.Consumer;
 
 public final class CustomPaintingItem extends Item {
     public CustomPaintingItem(Properties properties) {
@@ -24,6 +29,12 @@ public final class CustomPaintingItem extends Item {
     @Override
     public boolean isFoil(ItemStack stack) {
         return true;
+    }
+
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag tooltipFlag) {
+        PaintingItemData.Selection selection = PaintingItemData.get(stack);
+        if (selection != null) builder.accept(Component.translatable("item.njw_just_paintings.custom_painting.image", selection.fileName()).withStyle(ChatFormatting.GRAY));
     }
 
     @Override
