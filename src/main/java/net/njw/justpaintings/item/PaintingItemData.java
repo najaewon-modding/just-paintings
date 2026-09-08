@@ -17,8 +17,7 @@ public final class PaintingItemData {
     }
 
     public static boolean isSelected(ItemStack stack) {
-        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        return data != null && data.copyTag().contains(IMAGE_ID);
+        return get(stack) != null;
     }
 
     public static Selection get(ItemStack stack) {
@@ -26,15 +25,18 @@ public final class PaintingItemData {
         if (data == null) return null;
         CompoundTag tag = data.copyTag();
         String id = tag.getStringOr(IMAGE_ID, "");
-        if (id.isBlank()) return null;
+        int width = tag.getIntOr(WIDTH, 0);
+        int height = tag.getIntOr(HEIGHT, 0);
+        if (id.isBlank() || width < 1 || width > 3 || height < 1 || height > 3) return null;
         try {
-            return new Selection(UUID.fromString(id), tag.getStringOr(FILE_NAME, ""), tag.getIntOr(WIDTH, 1), tag.getIntOr(HEIGHT, 1));
+            return new Selection(UUID.fromString(id), tag.getStringOr(FILE_NAME, ""), width, height);
         } catch (IllegalArgumentException e) {
             return null;
         }
     }
 
     public static void set(ItemStack stack, UUID imageId, String fileName, int width, int height) {
+        if (width < 1 || width > 3 || height < 1 || height > 3) throw new IllegalArgumentException("Painting dimensions must be between 1 and 3");
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         tag.putString(IMAGE_ID, imageId.toString());
         tag.putString(FILE_NAME, fileName);
