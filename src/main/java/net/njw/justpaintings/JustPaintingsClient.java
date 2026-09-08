@@ -12,6 +12,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.njw.justpaintings.network.UploadPayloads;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -43,14 +44,20 @@ public final class JustPaintingsClient {
 
     private static void prepareUpload(Path path, int width, int height) {
         try {
-            if (!Files.isRegularFile(path)) throw new IllegalArgumentException("선택한 파일을 읽을 수 없습니다.");
+            if (!Files.isRegularFile(path)) {
+                showMessage(Component.translatable("message.njw_just_paintings.upload.file_unreadable"));
+                return;
+            }
             long fileSize = Files.size(path);
-            if (fileSize <= 0 || fileSize > UploadPayloads.MAX_UPLOAD_SIZE) throw new IllegalArgumentException("이미지 파일은 16 MiB 이하여야 합니다.");
+            if (fileSize <= 0 || fileSize > UploadPayloads.MAX_UPLOAD_SIZE) {
+                showMessage(Component.translatable("message.njw_just_paintings.upload.file_too_large", UploadPayloads.MAX_UPLOAD_SIZE / 1024 / 1024));
+                return;
+            }
             byte[] data = Files.readAllBytes(path);
             String fileName = path.getFileName().toString();
             Minecraft.getInstance().execute(() -> sendUpload(fileName, width, height, data));
-        } catch (Exception e) {
-            showMessage("업로드 준비에 실패했습니다: " + e.getMessage());
+        } catch (IOException e) {
+            showMessage(Component.translatable("message.njw_just_paintings.upload.prepare_failed"));
         }
     }
 
@@ -64,9 +71,9 @@ public final class JustPaintingsClient {
         ClientPacketDistributor.sendToServer(new UploadPayloads.UploadFinishPayload(uploadId));
     }
 
-    private static void showMessage(String message) {
+    private static void showMessage(Component message) {
         Minecraft.getInstance().execute(() -> {
-            if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendSystemMessage(Component.literal(message));
+            if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendSystemMessage(message);
         });
     }
 }
