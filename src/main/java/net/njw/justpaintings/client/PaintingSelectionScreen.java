@@ -38,7 +38,7 @@ public final class PaintingSelectionScreen extends Screen {
             boolean hovered = inside(mouseX, mouseY, x, rowY, panelWidth, ROW_HEIGHT);
             graphics.fill(x, rowY, x + panelWidth, rowY + ROW_HEIGHT, hovered ? 0x885A5A5A : 0x66000000);
             PaintingPayloads.Choice choice = choices.get(i);
-            Component label = Component.translatable("screen.njw_just_paintings.selection.entry", choice.fileName(), choice.width(), choice.height(), choice.uploader());
+            Component label = Component.translatable("screen.njw_just_paintings.selection.entry", choice.fileName(), choice.height(), choice.width(), choice.uploader());
             graphics.text(font, label, x + 8, rowY + (ROW_HEIGHT - font.lineHeight) / 2 + 1, 0xFFFFFFFF, false);
         }
         int controlsY = y + PAGE_SIZE * (ROW_HEIGHT + ROW_GAP) + 4;
