@@ -54,7 +54,8 @@ public final class PaintingSelectionScreen extends Screen {
             }
         }
         if (choices.size() > layout.visibleRows) drawScrollBar(graphics, layout.x + layout.panelWidth + 4, layout.y, layout.visibleRows);
-        drawControl(graphics, mouseX, mouseY, width / 2 - 45, layout.controlsY, 90, Component.translatable("gui.cancel"));
+        Component controlLabel = Component.translatable(selectable ? "gui.cancel" : "screen.njw_just_paintings.list.confirm");
+        drawControl(graphics, mouseX, mouseY, width / 2 - 45, layout.controlsY, 90, controlLabel);
     }
 
     @Override
