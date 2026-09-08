@@ -108,13 +108,22 @@ public final class PaintingUploadManager {
     }
 
     public static void sendChoices(ServerPlayer player, InteractionHand hand) {
+        sendChoices(player, hand, true);
+    }
+
+    public static int openList(ServerPlayer player) {
+        sendChoices(player, InteractionHand.MAIN_HAND, false);
+        return 1;
+    }
+
+    private static void sendChoices(ServerPlayer player, InteractionHand hand, boolean selectable) {
         try {
             List<StoredPainting> paintings = readPaintings(player.level().getServer());
             List<PaintingPayloads.Choice> choices = paintings.stream()
                     .filter(p -> p.stored() && p.width() >= 1 && p.width() <= 3 && p.height() >= 1 && p.height() <= 3)
                     .map(p -> new PaintingPayloads.Choice(p.id(), p.displayFileName(), p.width(), p.height(), p.uploader(), player.getUUID().toString().equals(p.uploaderUuid())))
                     .toList();
-            PacketDistributor.sendToPlayer(player, new PaintingPayloads.PaintingChoicesPayload(hand == InteractionHand.MAIN_HAND ? 0 : 1, choices));
+            PacketDistributor.sendToPlayer(player, new PaintingPayloads.PaintingChoicesPayload(hand == InteractionHand.MAIN_HAND ? 0 : 1, selectable, choices));
         } catch (IOException e) {
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.selection.failed"));
         }
@@ -145,16 +154,16 @@ public final class PaintingUploadManager {
             StoredPainting painting = findPainting(player.level().getServer(), payload.imageId());
             if (painting == null || !player.getUUID().toString().equals(painting.uploaderUuid())) {
                 player.sendSystemMessage(Component.translatable("message.njw_just_paintings.delete.denied"));
-                sendChoices(player, hand);
+                sendChoices(player, hand, payload.selectable());
                 return;
             }
             deletePainting(player.level().getServer(), painting.id(), painting.storedFileName());
             PacketDistributor.sendToAllPlayers(new PaintingPayloads.ImageRemovedPayload(painting.id()));
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.delete.success", painting.displayFileName()));
-            sendChoices(player, hand);
+            sendChoices(player, hand, payload.selectable());
         } catch (IOException e) {
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.delete.failed"));
-            sendChoices(player, hand);
+            sendChoices(player, hand, payload.selectable());
         }
     }
 
@@ -173,25 +182,6 @@ public final class PaintingUploadManager {
             }
             PacketDistributor.sendToPlayer(player, new PaintingPayloads.ImageFinishPayload(painting.id()));
         } catch (IOException ignored) {
-        }
-    }
-
-    public static int list(ServerPlayer player) {
-        try {
-            List<StoredPainting> paintings = readPaintings(player.level().getServer());
-            if (paintings.isEmpty()) {
-                player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.empty"));
-                return 0;
-            }
-            player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.header", paintings.size()));
-            for (StoredPainting painting : paintings) {
-                Component status = Component.translatable(painting.stored() ? "command.njw_just_paintings.list.status.stored" : "command.njw_just_paintings.list.status.missing");
-                player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.entry", painting.displayFileName(), painting.width(), painting.height(), painting.uploader(), status));
-            }
-            return paintings.size();
-        } catch (Exception e) {
-            player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.failed"));
-            return 0;
         }
     }
 
