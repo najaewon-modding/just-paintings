@@ -20,7 +20,7 @@ public final class PaintingPayloads {
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("2");
+        PayloadRegistrar registrar = event.registrar("3");
         registrar.playToClient(PaintingChoicesPayload.TYPE, PaintingChoicesPayload.STREAM_CODEC);
         registrar.playToServer(SelectPaintingPayload.TYPE, SelectPaintingPayload.STREAM_CODEC, PaintingUploadManager::handleSelection);
         registrar.playToServer(DeletePaintingPayload.TYPE, DeletePaintingPayload.STREAM_CODEC, PaintingUploadManager::handleDeletion);
@@ -28,6 +28,7 @@ public final class PaintingPayloads {
         registrar.playToClient(ImageStartPayload.TYPE, ImageStartPayload.STREAM_CODEC);
         registrar.playToClient(ImageChunkPayload.TYPE, ImageChunkPayload.STREAM_CODEC);
         registrar.playToClient(ImageFinishPayload.TYPE, ImageFinishPayload.STREAM_CODEC);
+        registrar.playToClient(ImageRemovedPayload.TYPE, ImageRemovedPayload.STREAM_CODEC);
     }
 
     public record Choice(UUID id, String fileName, int width, int height, String uploader, boolean deletable) {
@@ -137,6 +138,16 @@ public final class PaintingPayloads {
 
         @Override
         public Type<ImageFinishPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record ImageRemovedPayload(UUID imageId) implements CustomPacketPayload {
+        public static final Type<ImageRemovedPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(JustPaintings.MOD_ID, "image_removed"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, ImageRemovedPayload> STREAM_CODEC = StreamCodec.of((buffer, payload) -> buffer.writeUUID(payload.imageId), buffer -> new ImageRemovedPayload(buffer.readUUID()));
+
+        @Override
+        public Type<ImageRemovedPayload> type() {
             return TYPE;
         }
     }
