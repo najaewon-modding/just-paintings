@@ -30,7 +30,7 @@ public final class PaintingSelectionScreen extends Screen {
         int panelWidth = Math.min(380, width - 40);
         int x = (width - panelWidth) / 2;
         int y = Math.max(38, height / 2 - 105);
-        graphics.text(font, title, width / 2 - font.width(title) / 2, y - 24, 0xFFFFFFFF, true);
+        graphics.text(font, title, width / 2 - font.width(title) / 2, y - 23, 0xFFFFFFFF, true);
         int start = page * PAGE_SIZE;
         int end = Math.min(start + PAGE_SIZE, choices.size());
         for (int i = start; i < end; i++) {
@@ -39,7 +39,7 @@ public final class PaintingSelectionScreen extends Screen {
             graphics.fill(x, rowY, x + panelWidth, rowY + ROW_HEIGHT, hovered ? 0x885A5A5A : 0x66000000);
             PaintingPayloads.Choice choice = choices.get(i);
             Component label = Component.translatable("screen.njw_just_paintings.selection.entry", choice.fileName(), choice.width(), choice.height(), choice.uploader());
-            graphics.text(font, label, x + 8, rowY + (ROW_HEIGHT - font.lineHeight) / 2, 0xFFFFFFFF, false);
+            graphics.text(font, label, x + 8, rowY + (ROW_HEIGHT - font.lineHeight) / 2 + 1, 0xFFFFFFFF, false);
         }
         int controlsY = y + PAGE_SIZE * (ROW_HEIGHT + ROW_GAP) + 4;
         if (page > 0) drawControl(graphics, mouseX, mouseY, x, controlsY, 90, Component.translatable("screen.njw_just_paintings.selection.previous"));
@@ -83,7 +83,7 @@ public final class PaintingSelectionScreen extends Screen {
     private void drawControl(GuiGraphicsExtractor graphics, int mouseX, int mouseY, int x, int y, int controlWidth, Component label) {
         boolean hovered = inside(mouseX, mouseY, x, y, controlWidth, ROW_HEIGHT);
         graphics.fill(x, y, x + controlWidth, y + ROW_HEIGHT, hovered ? 0x885A5A5A : 0x66000000);
-        graphics.text(font, label, x + (controlWidth - font.width(label)) / 2, y + (ROW_HEIGHT - font.lineHeight) / 2, 0xFFFFFFFF, false);
+        graphics.text(font, label, x + (controlWidth - font.width(label)) / 2, y + (ROW_HEIGHT - font.lineHeight) / 2 + 1, 0xFFFFFFFF, false);
     }
 
     private void select(PaintingPayloads.Choice choice) {
