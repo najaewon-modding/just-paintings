@@ -132,6 +132,7 @@ public final class PaintingUploadManager {
                 return;
             }
             deletePainting(player.level().getServer(), painting.id(), painting.storedFileName());
+            PacketDistributor.sendToAllPlayers(new PaintingPayloads.ImageRemovedPayload(painting.id()));
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.delete.success", painting.displayFileName()));
             sendChoices(player, hand);
         } catch (IOException e) {
