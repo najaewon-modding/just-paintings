@@ -15,6 +15,7 @@ import java.util.UUID;
 
 public final class PaintingPayloads {
     public static final int MAX_IMAGE_CHUNK_SIZE = 24 * 1024;
+    private static final int MAX_CHOICES = 4096;
 
     private PaintingPayloads() {
     }
@@ -60,7 +61,8 @@ public final class PaintingPayloads {
         private static PaintingChoicesPayload decode(RegistryFriendlyByteBuf buffer) {
             int hand = buffer.readUnsignedByte();
             boolean selectable = buffer.readBoolean();
-            int size = Math.min(buffer.readVarInt(), 4096);
+            int size = buffer.readVarInt();
+            if (size < 0 || size > MAX_CHOICES) throw new IllegalArgumentException("Invalid painting choice count: " + size);
             List<Choice> choices = new ArrayList<>(size);
             for (int i = 0; i < size; i++) choices.add(Choice.decode(buffer));
             return new PaintingChoicesPayload(hand, selectable, List.copyOf(choices));
