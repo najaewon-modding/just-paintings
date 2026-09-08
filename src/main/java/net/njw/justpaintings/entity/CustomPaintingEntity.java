@@ -130,6 +130,7 @@ public final class CustomPaintingEntity extends HangingEntity {
         output.putString("PaintingFileName", entityData.get(FILE_NAME));
         output.putInt("PaintingWidth", getPaintingWidth());
         output.putInt("PaintingHeight", getPaintingHeight());
+        output.putInt("PaintingFacing", getDirection().get2DDataValue());
     }
 
     @Override
@@ -139,6 +140,7 @@ public final class CustomPaintingEntity extends HangingEntity {
         entityData.set(FILE_NAME, input.getStringOr("PaintingFileName", ""));
         entityData.set(WIDTH, Math.clamp(input.getIntOr("PaintingWidth", 1), 1, 3));
         entityData.set(HEIGHT, Math.clamp(input.getIntOr("PaintingHeight", 1), 1, 3));
+        setDirection(Direction.from2DDataValue(Math.floorMod(input.getIntOr("PaintingFacing", Direction.SOUTH.get2DDataValue()), 4)));
         recalculateBoundingBox();
     }
 }
