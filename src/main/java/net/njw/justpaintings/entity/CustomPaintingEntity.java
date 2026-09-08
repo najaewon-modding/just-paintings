@@ -26,6 +26,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.njw.justpaintings.item.PaintingItemData;
 import net.njw.justpaintings.registry.ModContent;
+import net.njw.justpaintings.server.PaintingUploadManager;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
@@ -123,7 +124,8 @@ public final class CustomPaintingEntity extends HangingEntity {
         if (!level.getGameRules().get(GameRules.ENTITY_DROPS)) return;
         playSound(SoundEvents.PAINTING_BREAK, 1.0F, 1.0F);
         if (causedBy instanceof Player player && player.hasInfiniteMaterials()) return;
-        spawnAtLocation(level, createPaintingStack());
+        ItemStack stack = PaintingUploadManager.isImageStored(level.getServer(), getImageId()) ? createPaintingStack() : new ItemStack(ModContent.CUSTOM_PAINTING.get());
+        spawnAtLocation(level, stack);
     }
 
     @Override
