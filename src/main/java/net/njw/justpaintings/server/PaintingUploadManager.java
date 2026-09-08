@@ -81,8 +81,7 @@ public final class PaintingUploadManager {
         byte[] bytes = session.data.toByteArray();
         BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
         if (image == null) throw new IOException("지원되는 이미지 파일이 아닙니다.");
-        MinecraftServer server = player.getServer();
-        if (server == null) throw new IOException("서버 정보를 찾을 수 없습니다.");
+        MinecraftServer server = player.level().getServer();
         Path root = server.getWorldPath(LevelResource.ROOT).resolve(JustPaintings.MOD_ID);
         Path images = root.resolve("images");
         Files.createDirectories(images);
