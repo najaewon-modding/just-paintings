@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.njw.justpaintings.entity.CustomPaintingEntity;
@@ -21,7 +22,6 @@ public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingE
     private static final float FRONT_Z = -DEPTH * 0.5F;
     private static final float BACK_Z = DEPTH * 0.5F;
     private static final float IMAGE_Z = FRONT_Z - 0.001F;
-    private static final int FULL_BRIGHT = 0x00F000F0;
     private static final Identifier FRAME_TEXTURE = Identifier.withDefaultNamespace("textures/painting/back.png");
 
     public CustomPaintingRenderer(EntityRendererProvider.Context context) {
@@ -51,18 +51,19 @@ public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingE
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - state.direction.toYRot()));
         float halfWidth = state.width * 0.5F;
         float halfHeight = state.height * 0.5F;
-        collector.submitCustomGeometry(poseStack, RenderTypes.entitySolid(FRAME_TEXTURE), (pose, buffer) -> renderFrame(pose, buffer, halfWidth, halfHeight, state.lightCoords));
-        collector.submitCustomGeometry(poseStack, RenderTypes.entitySolid(texture), (pose, buffer) -> renderImage(pose, buffer, halfWidth - FRAME, halfHeight - FRAME));
+        int light = state.lightCoords;
+        collector.submitCustomGeometry(poseStack, RenderTypes.entitySolid(FRAME_TEXTURE), (pose, buffer) -> renderFrame(pose, buffer, halfWidth, halfHeight, light));
+        collector.submitCustomGeometry(poseStack, RenderTypes.entitySolid(texture), (pose, buffer) -> renderImage(pose, buffer, halfWidth - FRAME, halfHeight - FRAME, light));
         poseStack.popPose();
     }
 
-    private static void renderImage(PoseStack.Pose pose, VertexConsumer buffer, float halfWidth, float halfHeight) {
+    private static void renderImage(PoseStack.Pose pose, VertexConsumer buffer, float halfWidth, float halfHeight, int light) {
         face(buffer, pose,
                 -halfWidth, halfHeight, IMAGE_Z,
                 halfWidth, halfHeight, IMAGE_Z,
                 halfWidth, -halfHeight, IMAGE_Z,
                 -halfWidth, -halfHeight, IMAGE_Z,
-                0.0F, 0.0F, -1.0F, FULL_BRIGHT);
+                0.0F, 0.0F, -1.0F, light);
     }
 
     private static void renderFrame(PoseStack.Pose pose, VertexConsumer buffer, float halfWidth, float halfHeight, int light) {
@@ -98,7 +99,7 @@ public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingE
     }
 
     private static void vertex(VertexConsumer buffer, PoseStack.Pose pose, float x, float y, float z, float u, float v, float nx, float ny, float nz, int light) {
-        buffer.addVertex(pose, x, y, z).setColor(255, 255, 255, 255).setUv(u, v).setOverlay(0).setLight(light).setNormal(pose, nx, ny, nz);
+        buffer.addVertex(pose, x, y, z).setColor(255, 255, 255, 255).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, nx, ny, nz);
     }
 
     public static final class State extends EntityRenderState {
