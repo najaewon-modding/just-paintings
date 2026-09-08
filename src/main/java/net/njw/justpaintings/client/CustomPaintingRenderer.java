@@ -18,6 +18,7 @@ import java.util.UUID;
 public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingEntity, CustomPaintingRenderer.State> {
     private static final float FRAME = 1.0F / 16.0F;
     private static final float DEPTH = 1.0F / 16.0F;
+    private static final float IMAGE_Z = -DEPTH * 0.5F - 0.002F;
     private static final Identifier FRAME_TEXTURE = Identifier.withDefaultNamespace("textures/painting/back.png");
 
     public CustomPaintingRenderer(EntityRendererProvider.Context context) {
@@ -49,13 +50,15 @@ public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingE
         float halfHeight = state.height * 0.5F;
         int light = state.lightCoords;
         collector.submitCustomGeometry(poseStack, RenderTypes.entityCutout(FRAME_TEXTURE), (pose, buffer) -> renderFrame(pose, buffer, halfWidth, halfHeight, light));
-        collector.submitCustomGeometry(poseStack, RenderTypes.entityCutout(texture), (pose, buffer) -> renderImage(pose, buffer, halfWidth - FRAME, halfHeight - FRAME, light));
+        collector.submitCustomGeometry(poseStack, RenderTypes.entitySolid(texture), (pose, buffer) -> renderImage(pose, buffer, halfWidth - FRAME, halfHeight - FRAME, light));
         poseStack.popPose();
     }
 
     private static void renderImage(PoseStack.Pose pose, VertexConsumer buffer, float halfWidth, float halfHeight, int light) {
-        float z = -DEPTH * 0.5F - 0.001F;
-        quad(buffer, pose, -halfWidth, halfHeight, z, halfWidth, -halfHeight, z, light);
+        vertex(buffer, pose, -halfWidth, halfHeight, IMAGE_Z, 0.0F, 0.0F, light);
+        vertex(buffer, pose, halfWidth, halfHeight, IMAGE_Z, 1.0F, 0.0F, light);
+        vertex(buffer, pose, halfWidth, -halfHeight, IMAGE_Z, 1.0F, 1.0F, light);
+        vertex(buffer, pose, -halfWidth, -halfHeight, IMAGE_Z, 0.0F, 1.0F, light);
     }
 
     private static void renderFrame(PoseStack.Pose pose, VertexConsumer buffer, float halfWidth, float halfHeight, int light) {
