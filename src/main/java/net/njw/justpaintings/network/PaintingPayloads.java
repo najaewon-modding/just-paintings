@@ -20,7 +20,7 @@ public final class PaintingPayloads {
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("3");
+        PayloadRegistrar registrar = event.registrar("4");
         registrar.playToClient(PaintingChoicesPayload.TYPE, PaintingChoicesPayload.STREAM_CODEC);
         registrar.playToServer(SelectPaintingPayload.TYPE, SelectPaintingPayload.STREAM_CODEC, PaintingUploadManager::handleSelection);
         registrar.playToServer(DeletePaintingPayload.TYPE, DeletePaintingPayload.STREAM_CODEC, PaintingUploadManager::handleDeletion);
@@ -46,22 +46,24 @@ public final class PaintingPayloads {
         }
     }
 
-    public record PaintingChoicesPayload(int hand, List<Choice> choices) implements CustomPacketPayload {
+    public record PaintingChoicesPayload(int hand, boolean selectable, List<Choice> choices) implements CustomPacketPayload {
         public static final Type<PaintingChoicesPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(JustPaintings.MOD_ID, "painting_choices"));
         public static final StreamCodec<RegistryFriendlyByteBuf, PaintingChoicesPayload> STREAM_CODEC = StreamCodec.of(PaintingChoicesPayload::encode, PaintingChoicesPayload::decode);
 
         private static void encode(RegistryFriendlyByteBuf buffer, PaintingChoicesPayload payload) {
             buffer.writeByte(payload.hand);
+            buffer.writeBoolean(payload.selectable);
             buffer.writeVarInt(payload.choices.size());
             for (Choice choice : payload.choices) Choice.encode(buffer, choice);
         }
 
         private static PaintingChoicesPayload decode(RegistryFriendlyByteBuf buffer) {
             int hand = buffer.readUnsignedByte();
+            boolean selectable = buffer.readBoolean();
             int size = Math.min(buffer.readVarInt(), 4096);
             List<Choice> choices = new ArrayList<>(size);
             for (int i = 0; i < size; i++) choices.add(Choice.decode(buffer));
-            return new PaintingChoicesPayload(hand, List.copyOf(choices));
+            return new PaintingChoicesPayload(hand, selectable, List.copyOf(choices));
         }
 
         @Override
@@ -83,12 +85,13 @@ public final class PaintingPayloads {
         }
     }
 
-    public record DeletePaintingPayload(int hand, UUID imageId) implements CustomPacketPayload {
+    public record DeletePaintingPayload(int hand, boolean selectable, UUID imageId) implements CustomPacketPayload {
         public static final Type<DeletePaintingPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(JustPaintings.MOD_ID, "delete_painting"));
         public static final StreamCodec<RegistryFriendlyByteBuf, DeletePaintingPayload> STREAM_CODEC = StreamCodec.of((buffer, payload) -> {
             buffer.writeByte(payload.hand);
+            buffer.writeBoolean(payload.selectable);
             buffer.writeUUID(payload.imageId);
-        }, buffer -> new DeletePaintingPayload(buffer.readUnsignedByte(), buffer.readUUID()));
+        }, buffer -> new DeletePaintingPayload(buffer.readUnsignedByte(), buffer.readBoolean(), buffer.readUUID()));
 
         @Override
         public Type<DeletePaintingPayload> type() {
