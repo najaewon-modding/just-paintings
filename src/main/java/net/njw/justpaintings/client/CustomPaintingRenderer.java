@@ -16,6 +16,10 @@ import net.njw.justpaintings.entity.CustomPaintingEntity;
 import java.util.UUID;
 
 public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingEntity, CustomPaintingRenderer.State> {
+    private static final float FRAME = 1.0F / 16.0F;
+    private static final float DEPTH = 1.0F / 16.0F;
+    private static final Identifier FRAME_TEXTURE = Identifier.withDefaultNamespace("textures/painting/back.png");
+
     public CustomPaintingRenderer(EntityRendererProvider.Context context) {
         super(context);
         shadowRadius = 0.0F;
@@ -44,15 +48,44 @@ public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingE
         float halfWidth = state.width * 0.5F;
         float halfHeight = state.height * 0.5F;
         int light = state.lightCoords;
-        collector.submitCustomGeometry(poseStack, RenderTypes.entityCutout(texture), (pose, buffer) -> renderQuad(pose, buffer, halfWidth, halfHeight, light));
+        collector.submitCustomGeometry(poseStack, RenderTypes.entityCutout(FRAME_TEXTURE), (pose, buffer) -> renderFrame(pose, buffer, halfWidth, halfHeight, light));
+        collector.submitCustomGeometry(poseStack, RenderTypes.entityCutout(texture), (pose, buffer) -> renderImage(pose, buffer, halfWidth - FRAME, halfHeight - FRAME, light));
         poseStack.popPose();
     }
 
-    private static void renderQuad(PoseStack.Pose pose, VertexConsumer buffer, float halfWidth, float halfHeight, int light) {
-        vertex(buffer, pose, -halfWidth, halfHeight, 0.0F, 0.0F, 0.0F, light);
-        vertex(buffer, pose, halfWidth, halfHeight, 0.0F, 1.0F, 0.0F, light);
-        vertex(buffer, pose, halfWidth, -halfHeight, 0.0F, 1.0F, 1.0F, light);
-        vertex(buffer, pose, -halfWidth, -halfHeight, 0.0F, 0.0F, 1.0F, light);
+    private static void renderImage(PoseStack.Pose pose, VertexConsumer buffer, float halfWidth, float halfHeight, int light) {
+        float z = -DEPTH * 0.5F - 0.001F;
+        quad(buffer, pose, -halfWidth, halfHeight, z, halfWidth, -halfHeight, z, light);
+    }
+
+    private static void renderFrame(PoseStack.Pose pose, VertexConsumer buffer, float halfWidth, float halfHeight, int light) {
+        box(buffer, pose, -halfWidth, halfHeight - FRAME, -DEPTH * 0.5F, halfWidth, halfHeight, DEPTH * 0.5F, light);
+        box(buffer, pose, -halfWidth, -halfHeight, -DEPTH * 0.5F, halfWidth, -halfHeight + FRAME, DEPTH * 0.5F, light);
+        box(buffer, pose, -halfWidth, -halfHeight + FRAME, -DEPTH * 0.5F, -halfWidth + FRAME, halfHeight - FRAME, DEPTH * 0.5F, light);
+        box(buffer, pose, halfWidth - FRAME, -halfHeight + FRAME, -DEPTH * 0.5F, halfWidth, halfHeight - FRAME, DEPTH * 0.5F, light);
+        quad(buffer, pose, -halfWidth + FRAME, halfHeight - FRAME, DEPTH * 0.5F, halfWidth - FRAME, -halfHeight + FRAME, DEPTH * 0.5F, light);
+    }
+
+    private static void box(VertexConsumer buffer, PoseStack.Pose pose, float x0, float y0, float z0, float x1, float y1, float z1, int light) {
+        quad(buffer, pose, x0, y1, z0, x1, y0, z0, light);
+        quad(buffer, pose, x1, y1, z1, x0, y0, z1, light);
+        quad(buffer, pose, x0, y1, z1, x0, y0, z0, light);
+        quad(buffer, pose, x1, y1, z0, x1, y0, z1, light);
+        vertex(buffer, pose, x0, y1, z1, 0.0F, 0.0F, light);
+        vertex(buffer, pose, x1, y1, z1, 1.0F, 0.0F, light);
+        vertex(buffer, pose, x1, y1, z0, 1.0F, 1.0F, light);
+        vertex(buffer, pose, x0, y1, z0, 0.0F, 1.0F, light);
+        vertex(buffer, pose, x0, y0, z0, 0.0F, 0.0F, light);
+        vertex(buffer, pose, x1, y0, z0, 1.0F, 0.0F, light);
+        vertex(buffer, pose, x1, y0, z1, 1.0F, 1.0F, light);
+        vertex(buffer, pose, x0, y0, z1, 0.0F, 1.0F, light);
+    }
+
+    private static void quad(VertexConsumer buffer, PoseStack.Pose pose, float x0, float y0, float z0, float x1, float y1, float z1, int light) {
+        vertex(buffer, pose, x0, y0, z0, 0.0F, 0.0F, light);
+        vertex(buffer, pose, x1, y0, z0, 1.0F, 0.0F, light);
+        vertex(buffer, pose, x1, y1, z1, 1.0F, 1.0F, light);
+        vertex(buffer, pose, x0, y1, z1, 0.0F, 1.0F, light);
     }
 
     private static void vertex(VertexConsumer buffer, PoseStack.Pose pose, float x, float y, float z, float u, float v, int light) {
