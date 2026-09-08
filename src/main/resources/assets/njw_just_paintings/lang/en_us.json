@@ -1,5 +1,6 @@
 {
   "item.njw_just_paintings.custom_painting": "Custom Painting",
+  "item.njw_just_paintings.custom_painting.image": "Image: %s",
   "dialog.njw_just_paintings.upload.title": "Select painting image",
   "message.njw_just_paintings.upload.invalid_request": "The image upload request is invalid.",
   "message.njw_just_paintings.upload.invalid_dimensions": "Paintings can be at most 3x3 blocks.",
