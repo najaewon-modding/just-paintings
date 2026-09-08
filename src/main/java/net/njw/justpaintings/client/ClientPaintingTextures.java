@@ -7,7 +7,6 @@ import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.njw.justpaintings.JustPaintings;
 import net.njw.justpaintings.network.PaintingPayloads;
-import net.njw.justpaintings.network.UploadPayloads;
 import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
@@ -39,7 +38,7 @@ public final class ClientPaintingTextures {
 
     public static void start(PaintingPayloads.ImageStartPayload payload) {
         if (MISSING.contains(payload.imageId())) return;
-        if (payload.totalSize() < 1 || payload.totalSize() > UploadPayloads.MAX_UPLOAD_SIZE) {
+        if (payload.totalSize() < 1 || payload.totalSize() > PaintingPayloads.MAX_IMAGE_SIZE) {
             DOWNLOADS.remove(payload.imageId());
             REQUESTED.remove(payload.imageId());
             return;
