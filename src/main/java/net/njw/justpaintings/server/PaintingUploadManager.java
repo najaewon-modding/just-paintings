@@ -89,7 +89,10 @@ public final class PaintingUploadManager {
     public static void sendChoices(ServerPlayer player, InteractionHand hand) {
         try {
             List<StoredPainting> paintings = readPaintings(player.level().getServer());
-            List<PaintingPayloads.Choice> choices = paintings.stream().filter(StoredPainting::stored).map(p -> new PaintingPayloads.Choice(p.id(), p.fileName(), p.width(), p.height(), p.uploader())).toList();
+            List<PaintingPayloads.Choice> choices = paintings.stream()
+                    .filter(p -> p.stored() && p.width() >= 1 && p.width() <= 3 && p.height() >= 1 && p.height() <= 3)
+                    .map(p -> new PaintingPayloads.Choice(p.id(), p.fileName(), p.width(), p.height(), p.uploader()))
+                    .toList();
             PacketDistributor.sendToPlayer(player, new PaintingPayloads.PaintingChoicesPayload(hand == InteractionHand.MAIN_HAND ? 0 : 1, choices));
         } catch (IOException e) {
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.selection.failed"));
