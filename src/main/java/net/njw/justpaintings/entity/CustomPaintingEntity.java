@@ -51,6 +51,12 @@ public final class CustomPaintingEntity extends HangingEntity {
         builder.define(HEIGHT, 1);
     }
 
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (WIDTH.equals(accessor) || HEIGHT.equals(accessor)) recalculateBoundingBox();
+    }
+
     public UUID getImageId() {
         try {
             return UUID.fromString(entityData.get(IMAGE_ID));
