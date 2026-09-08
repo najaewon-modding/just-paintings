@@ -46,7 +46,11 @@ public final class PaintingUploadManager {
 
     public static void handleStart(UploadPayloads.UploadStartPayload payload, IPayloadContext context) {
         ServerPlayer player = (ServerPlayer) context.player();
-        if (payload.width() < 1 || payload.width() > 3 || payload.height() < 1 || payload.height() > 3 || payload.totalSize() < 1 || payload.totalSize() > UploadPayloads.MAX_UPLOAD_SIZE) {
+        if (payload.width() < 1 || payload.width() > 3 || payload.height() < 1 || payload.height() > 3) {
+            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.invalid_dimensions"));
+            return;
+        }
+        if (payload.totalSize() < 1 || payload.totalSize() > UploadPayloads.MAX_UPLOAD_SIZE) {
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.invalid_request"));
             return;
         }
