@@ -20,7 +20,7 @@ public final class PaintingPayloads {
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
+        PayloadRegistrar registrar = event.registrar("2");
         registrar.playToClient(PaintingChoicesPayload.TYPE, PaintingChoicesPayload.STREAM_CODEC);
         registrar.playToServer(SelectPaintingPayload.TYPE, SelectPaintingPayload.STREAM_CODEC, PaintingUploadManager::handleSelection);
         registrar.playToServer(DeletePaintingPayload.TYPE, DeletePaintingPayload.STREAM_CODEC, PaintingUploadManager::handleDeletion);
