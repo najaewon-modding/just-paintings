@@ -113,7 +113,7 @@ public final class PaintingSelectionScreen extends Screen {
         String value = text.getString();
         String ellipsis = "...";
         int ellipsisWidth = font.width(ellipsis);
-        while (!value.isEmpty() && font.width(value) + ellipsisWidth > maxWidth) value = value.substring(0, value.length() - 1);
+        while (!value.isEmpty() && font.width(value) + ellipsisWidth > maxWidth) value = value.substring(0, value.offsetByCodePoints(value.length(), -1));
         return Component.literal(value + ellipsis);
     }
 
