@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -27,6 +28,7 @@ public final class CustomPaintingItem extends Item {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag tooltipFlag) {
         PaintingItemData.Selection selection = PaintingItemData.get(stack);
         if (selection != null) builder.accept(Component.literal(selection.fileName()).withStyle(ChatFormatting.GRAY));
@@ -34,12 +36,9 @@ public final class CustomPaintingItem extends Item {
 
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
-        if (!PaintingItemData.isSelected(stack)) {
-            if (!level.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) PaintingUploadManager.sendChoices(serverPlayer, hand);
-            return InteractionResult.SUCCESS;
-        }
-        return InteractionResult.PASS;
+        if (PaintingItemData.get(player.getItemInHand(hand)) != null) return InteractionResult.PASS;
+        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) PaintingUploadManager.sendChoices(serverPlayer, hand);
+        return InteractionResult.SUCCESS;
     }
 
     @Override
@@ -47,14 +46,13 @@ public final class CustomPaintingItem extends Item {
         Player player = context.getPlayer();
         if (player == null) return InteractionResult.FAIL;
         ItemStack stack = context.getItemInHand();
-        if (!PaintingItemData.isSelected(stack)) {
-            if (!context.getLevel().isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) PaintingUploadManager.sendChoices(serverPlayer, context.getHand());
+        PaintingItemData.Selection selection = PaintingItemData.get(stack);
+        if (selection == null) {
+            if (!context.getLevel().isClientSide() && player instanceof ServerPlayer serverPlayer) PaintingUploadManager.sendChoices(serverPlayer, context.getHand());
             return InteractionResult.SUCCESS;
         }
         Direction face = context.getClickedFace();
         if (face.getAxis().isVertical()) return InteractionResult.FAIL;
-        PaintingItemData.Selection selection = PaintingItemData.get(stack);
-        if (selection == null) return InteractionResult.FAIL;
         if (!(context.getLevel() instanceof ServerLevel level)) return InteractionResult.SUCCESS;
         BlockPos clickedTopLeft = context.getClickedPos().relative(face);
         CustomPaintingEntity entity = findPlacement(level, player, stack, clickedTopLeft, face, selection);
