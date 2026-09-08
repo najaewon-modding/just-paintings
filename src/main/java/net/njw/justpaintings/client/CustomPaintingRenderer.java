@@ -25,6 +25,7 @@ import java.util.UUID;
 
 public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingEntity, CustomPaintingRenderer.State> {
     private static final Identifier BACK_SPRITE_LOCATION = Identifier.withDefaultNamespace("back");
+    private static final Identifier EMPTY_FRONT_TEXTURE = Identifier.withDefaultNamespace("textures/map/map_background.png");
     private static final float FRAME = 1.0F / 16.0F;
     private static final float FRONT_FRAME_Z = -0.03135F;
     private final TextureAtlas paintingsAtlas;
@@ -71,11 +72,13 @@ public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingE
     @Override
     public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState cameraState) {
         Identifier frontTexture = ClientPaintingTextures.getOrRequest(state.imageId);
+        if (frontTexture == null) frontTexture = EMPTY_FRONT_TEXTURE;
         TextureAtlasSprite backSprite = paintingsAtlas.getSprite(BACK_SPRITE_LOCATION);
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - state.direction.get2DDataValue() * 90.0F));
         collector.submitCustomGeometry(poseStack, RenderTypes.entitySolidZOffsetForward(backSprite.atlasLocation()), (pose, buffer) -> renderBackEdgesAndFrame(pose, buffer, state.lightCoordsPerBlock, state.width, state.height, backSprite));
-        if (frontTexture != null) collector.submitCustomGeometry(poseStack, RenderTypes.entitySolidZOffsetForward(frontTexture), (pose, buffer) -> renderFront(pose, buffer, state.lightCoordsPerBlock, state.width, state.height));
+        Identifier finalFrontTexture = frontTexture;
+        collector.submitCustomGeometry(poseStack, RenderTypes.entitySolidZOffsetForward(finalFrontTexture), (pose, buffer) -> renderFront(pose, buffer, state.lightCoordsPerBlock, state.width, state.height));
         poseStack.popPose();
         super.submit(state, poseStack, collector, cameraState);
     }
