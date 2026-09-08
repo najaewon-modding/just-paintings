@@ -91,6 +91,22 @@ public final class CustomPaintingEntity extends HangingEntity {
     }
 
     @Override
+    public boolean survives() {
+        Direction direction = getDirection();
+        if (direction.getAxis() == Direction.Axis.Y) return false;
+        Direction right = direction.getCounterClockWise();
+        BlockPos topLeft = getPos();
+        for (int y = 0; y < getPaintingHeight(); y++) {
+            for (int x = 0; x < getPaintingWidth(); x++) {
+                BlockPos front = topLeft.relative(right, x).below(y);
+                BlockPos support = front.relative(direction.getOpposite());
+                if (!level().getBlockState(front).isAir() || level().getBlockState(support).isAir()) return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
     public void playPlacementSound() {
         playSound(SoundEvents.PAINTING_PLACE, 1.0F, 1.0F);
     }
