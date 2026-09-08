@@ -15,6 +15,7 @@ import java.util.UUID;
 
 public final class PaintingPayloads {
     public static final int MAX_IMAGE_CHUNK_SIZE = 24 * 1024;
+    public static final int MAX_IMAGE_SIZE = 20 * 1024 * 1024;
     private static final int MAX_CHOICES = 4096;
 
     private PaintingPayloads() {
