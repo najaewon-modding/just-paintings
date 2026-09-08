@@ -9,6 +9,8 @@
   "message.njw_just_paintings.upload.file_unreadable": "The selected file could not be read.",
   "message.njw_just_paintings.upload.file_too_large": "The image file must be %s MiB or smaller.",
   "message.njw_just_paintings.upload.prepare_failed": "An error occurred while preparing the image upload.",
+  "message.njw_just_paintings.upload.limit.player": "Each player can upload at most %s images.",
+  "message.njw_just_paintings.upload.limit.server": "The server can store at most %s uploaded images.",
   "message.njw_just_paintings.selection.success": "Applied: %s",
   "message.njw_just_paintings.selection.failed": "Could not select the painting.",
   "message.njw_just_paintings.delete.success": "Deleted %s.",
