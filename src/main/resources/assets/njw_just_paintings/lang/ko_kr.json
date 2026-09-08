@@ -1,5 +1,6 @@
 {
   "item.njw_just_paintings.custom_painting": "사용자 지정 그림",
+  "item.njw_just_paintings.custom_painting.image": "이미지: %s",
   "dialog.njw_just_paintings.upload.title": "그림 이미지 선택",
   "message.njw_just_paintings.upload.invalid_request": "이미지 업로드 요청이 올바르지 않습니다.",
   "message.njw_just_paintings.upload.invalid_dimensions": "그림은 최대 3x3 블록 크기까지만 가능합니다.",
