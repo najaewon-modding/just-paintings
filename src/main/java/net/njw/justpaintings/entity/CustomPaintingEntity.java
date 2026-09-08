@@ -11,16 +11,21 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.njw.justpaintings.item.PaintingItemData;
 import net.njw.justpaintings.registry.ModContent;
@@ -47,7 +52,6 @@ public final class CustomPaintingEntity extends HangingEntity {
         entityData.set(WIDTH, selection.width());
         entityData.set(HEIGHT, selection.height());
         setDirection(direction);
-        recalculateBoundingBox();
     }
 
     @Override
@@ -85,37 +89,51 @@ public final class CustomPaintingEntity extends HangingEntity {
         return Math.clamp(entityData.get(HEIGHT), 1, 3);
     }
 
+    private Direction right() {
+        return getDirection().getCounterClockWise();
+    }
+
+    private BlockPos cell(int x, int y) {
+        return getPos().relative(right(), x).below(y);
+    }
+
     @Override
     protected AABB calculateBoundingBox(BlockPos topLeft, Direction direction) {
-        int width = getPaintingWidth();
-        int height = getPaintingHeight();
         Direction right = direction.getCounterClockWise();
         Vec3 center = Vec3.atCenterOf(topLeft)
                 .relative(direction.getOpposite(), 0.46875)
-                .add(right.getStepX() * (width - 1) * 0.5, -(height - 1) * 0.5, right.getStepZ() * (width - 1) * 0.5);
-        double sizeX = direction.getAxis() == Direction.Axis.Z ? width : 0.0625;
-        double sizeZ = direction.getAxis() == Direction.Axis.X ? width : 0.0625;
-        return AABB.ofSize(center, sizeX, height, sizeZ);
+                .add(right.getStepX() * (getPaintingWidth() - 1) * 0.5, -(getPaintingHeight() - 1) * 0.5, right.getStepZ() * (getPaintingWidth() - 1) * 0.5);
+        double sizeX = direction.getAxis() == Direction.Axis.Z ? getPaintingWidth() : 0.0625;
+        double sizeZ = direction.getAxis() == Direction.Axis.X ? getPaintingWidth() : 0.0625;
+        return AABB.ofSize(center, sizeX, getPaintingHeight(), sizeZ);
     }
 
     @Override
     public boolean survives() {
-        Direction direction = getDirection();
-        if (direction.getAxis() == Direction.Axis.Y) return false;
-        Direction right = direction.getCounterClockWise();
-        BlockPos topLeft = getPos();
+        if (getDirection().getAxis() == Direction.Axis.Y) return false;
         boolean hasSupport = false;
         for (int y = 0; y < getPaintingHeight(); y++) {
             for (int x = 0; x < getPaintingWidth(); x++) {
-                BlockPos front = topLeft.relative(right, x).below(y);
-                BlockPos support = front.relative(direction.getOpposite());
+                BlockPos front = cell(x, y);
                 if (!level().getBlockState(front).isAir()) return false;
-                if (!level().getBlockState(support).isAir()) hasSupport = true;
+                if (!level().getBlockState(front.relative(getDirection().getOpposite())).isAir()) hasSupport = true;
             }
         }
         if (!hasSupport) return false;
-        AABB box = getBoundingBox().deflate(1.0E-4);
-        return level().getEntities(this, box).stream().noneMatch(entity -> entity instanceof HangingEntity);
+        return level().getEntities(this, getBoundingBox().deflate(1.0E-4)).stream().noneMatch(entity -> entity instanceof HangingEntity);
+    }
+
+    @Override
+    public InteractionResult interact(Player player, InteractionHand hand, Vec3 location) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (!(stack.getItem() instanceof BlockItem blockItem)) return super.interact(player, hand, location);
+        Vec3 worldHit = position().add(location);
+        BlockPos paintingCell = BlockPos.containing(worldHit.relative(getDirection(), 0.25));
+        BlockPos target = paintingCell.relative(getDirection());
+        if (!player.mayUseItemAt(target, getDirection(), stack)) return InteractionResult.FAIL;
+        if (level().isClientSide()) return InteractionResult.SUCCESS;
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(target), getDirection(), target, false);
+        return blockItem.place(new BlockPlaceContext(player, hand, stack, hit));
     }
 
     @Override
@@ -172,6 +190,5 @@ public final class CustomPaintingEntity extends HangingEntity {
         entityData.set(WIDTH, Math.clamp(input.getIntOr("PaintingWidth", 1), 1, 3));
         entityData.set(HEIGHT, Math.clamp(input.getIntOr("PaintingHeight", 1), 1, 3));
         setDirection(Direction.from2DDataValue(Math.floorMod(input.getIntOr("PaintingFacing", Direction.SOUTH.get2DDataValue()), 4)));
-        recalculateBoundingBox();
     }
 }
