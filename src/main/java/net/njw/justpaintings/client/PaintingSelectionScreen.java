@@ -11,10 +11,14 @@ import net.njw.justpaintings.network.PaintingPayloads;
 import java.util.List;
 
 public final class PaintingSelectionScreen extends Screen {
-    private static final int VISIBLE_ROWS = 6;
+    private static final int MAX_VISIBLE_ROWS = 6;
     private static final int ROW_HEIGHT = 24;
     private static final int ROW_GAP = 6;
     private static final int DELETE_WIDTH = 48;
+    private static final int SIDE_MARGIN = 20;
+    private static final int LIST_TOP = 52;
+    private static final int CONTROL_BOTTOM_MARGIN = 12;
+    private static final int CONTROL_GAP = 10;
     private final int hand;
     private final List<PaintingPayloads.Choice> choices;
     private int firstVisible;
@@ -28,30 +32,27 @@ public final class PaintingSelectionScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, width, height, 0x66000000);
-        int panelWidth = Math.min(420, width - 40);
-        int x = (width - panelWidth) / 2;
-        int y = Math.max(38, height / 2 - 105);
-        graphics.text(font, title, width / 2 - font.width(title) / 2, y - 23, 0xFFFFFFFF, true);
-        int end = Math.min(firstVisible + VISIBLE_ROWS, choices.size());
+        Layout layout = layout();
+        graphics.text(font, title, width / 2 - font.width(title) / 2, Math.max(10, layout.y - 23), 0xFFFFFFFF, true);
+        int end = Math.min(firstVisible + layout.visibleRows, choices.size());
         for (int i = firstVisible; i < end; i++) {
-            int rowY = y + (i - firstVisible) * (ROW_HEIGHT + ROW_GAP);
+            int rowY = layout.y + (i - firstVisible) * (ROW_HEIGHT + ROW_GAP);
             PaintingPayloads.Choice choice = choices.get(i);
-            int deleteX = x + panelWidth - DELETE_WIDTH;
+            int deleteX = layout.x + layout.panelWidth - DELETE_WIDTH;
             boolean deleteHovered = choice.deletable() && inside(mouseX, mouseY, deleteX, rowY, DELETE_WIDTH, ROW_HEIGHT);
-            boolean rowHovered = inside(mouseX, mouseY, x, rowY, panelWidth, ROW_HEIGHT) && !deleteHovered;
-            graphics.fill(x, rowY, x + panelWidth, rowY + ROW_HEIGHT, rowHovered ? 0x885A5A5A : 0x66000000);
-            int textRight = choice.deletable() ? deleteX - 6 : x + panelWidth - 8;
+            boolean rowHovered = inside(mouseX, mouseY, layout.x, rowY, layout.panelWidth, ROW_HEIGHT) && !deleteHovered;
+            graphics.fill(layout.x, rowY, layout.x + layout.panelWidth, rowY + ROW_HEIGHT, rowHovered ? 0x885A5A5A : 0x66000000);
+            int textRight = choice.deletable() ? deleteX - 6 : layout.x + layout.panelWidth - 8;
             Component label = Component.translatable("screen.njw_just_paintings.selection.entry", choice.fileName(), choice.width(), choice.height(), choice.uploader());
-            graphics.text(font, trim(label, textRight - (x + 8)), x + 8, rowY + (ROW_HEIGHT - font.lineHeight) / 2 + 1, 0xFFFFFFFF, false);
+            graphics.text(font, trim(label, textRight - (layout.x + 8)), layout.x + 8, rowY + (ROW_HEIGHT - font.lineHeight) / 2 + 1, 0xFFFFFFFF, false);
             if (choice.deletable()) {
-                graphics.fill(deleteX, rowY, x + panelWidth, rowY + ROW_HEIGHT, deleteHovered ? 0xAA7A3030 : 0x884A2020);
+                graphics.fill(deleteX, rowY, layout.x + layout.panelWidth, rowY + ROW_HEIGHT, deleteHovered ? 0x885A5A5A : 0x66000000);
                 Component delete = Component.translatable("screen.njw_just_paintings.selection.delete");
                 graphics.text(font, delete, deleteX + (DELETE_WIDTH - font.width(delete)) / 2, rowY + (ROW_HEIGHT - font.lineHeight) / 2 + 1, 0xFFFFFFFF, false);
             }
         }
-        if (choices.size() > VISIBLE_ROWS) drawScrollBar(graphics, x + panelWidth + 4, y);
-        int controlsY = y + VISIBLE_ROWS * (ROW_HEIGHT + ROW_GAP) + 4;
-        drawControl(graphics, mouseX, mouseY, width / 2 - 45, controlsY, 90, Component.translatable("gui.cancel"));
+        if (choices.size() > layout.visibleRows) drawScrollBar(graphics, layout.x + layout.panelWidth + 4, layout.y, layout.visibleRows);
+        drawControl(graphics, mouseX, mouseY, width / 2 - 45, layout.controlsY, 90, Component.translatable("gui.cancel"));
     }
 
     @Override
@@ -59,25 +60,22 @@ public final class PaintingSelectionScreen extends Screen {
         if (event.button() != 0) return super.mouseClicked(event, doubleClick);
         int mouseX = (int) event.x();
         int mouseY = (int) event.y();
-        int panelWidth = Math.min(420, width - 40);
-        int x = (width - panelWidth) / 2;
-        int y = Math.max(38, height / 2 - 105);
-        int end = Math.min(firstVisible + VISIBLE_ROWS, choices.size());
+        Layout layout = layout();
+        int end = Math.min(firstVisible + layout.visibleRows, choices.size());
         for (int i = firstVisible; i < end; i++) {
-            int rowY = y + (i - firstVisible) * (ROW_HEIGHT + ROW_GAP);
+            int rowY = layout.y + (i - firstVisible) * (ROW_HEIGHT + ROW_GAP);
             PaintingPayloads.Choice choice = choices.get(i);
-            int deleteX = x + panelWidth - DELETE_WIDTH;
+            int deleteX = layout.x + layout.panelWidth - DELETE_WIDTH;
             if (choice.deletable() && inside(mouseX, mouseY, deleteX, rowY, DELETE_WIDTH, ROW_HEIGHT)) {
                 ClientPacketDistributor.sendToServer(new PaintingPayloads.DeletePaintingPayload(hand, choice.id()));
                 return true;
             }
-            if (inside(mouseX, mouseY, x, rowY, panelWidth, ROW_HEIGHT)) {
+            if (inside(mouseX, mouseY, layout.x, rowY, layout.panelWidth, ROW_HEIGHT)) {
                 select(choice);
                 return true;
             }
         }
-        int controlsY = y + VISIBLE_ROWS * (ROW_HEIGHT + ROW_GAP) + 4;
-        if (inside(mouseX, mouseY, width / 2 - 45, controlsY, 90, ROW_HEIGHT)) {
+        if (inside(mouseX, mouseY, width / 2 - 45, layout.controlsY, 90, ROW_HEIGHT)) {
             onClose();
             return true;
         }
@@ -86,15 +84,25 @@ public final class PaintingSelectionScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        int panelWidth = Math.min(420, width - 40);
-        int x = (width - panelWidth) / 2;
-        int y = Math.max(38, height / 2 - 105);
-        int listHeight = VISIBLE_ROWS * (ROW_HEIGHT + ROW_GAP) - ROW_GAP;
-        if (!inside((int) mouseX, (int) mouseY, x, y, panelWidth, listHeight)) return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-        int maxFirst = Math.max(0, choices.size() - VISIBLE_ROWS);
+        Layout layout = layout();
+        if (!inside((int) mouseX, (int) mouseY, layout.x, layout.y, layout.panelWidth, layout.listHeight)) return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        int maxFirst = Math.max(0, choices.size() - layout.visibleRows);
         if (scrollY > 0.0) firstVisible = Math.max(0, firstVisible - 1);
         else if (scrollY < 0.0) firstVisible = Math.min(maxFirst, firstVisible + 1);
         return true;
+    }
+
+    private Layout layout() {
+        int panelWidth = Math.min(420, Math.max(120, width - SIDE_MARGIN * 2));
+        int x = (width - panelWidth) / 2;
+        int controlsY = Math.max(LIST_TOP + ROW_HEIGHT, height - CONTROL_BOTTOM_MARGIN - ROW_HEIGHT);
+        int availableListHeight = Math.max(ROW_HEIGHT, controlsY - CONTROL_GAP - LIST_TOP);
+        int visibleRows = Math.max(1, Math.min(MAX_VISIBLE_ROWS, (availableListHeight + ROW_GAP) / (ROW_HEIGHT + ROW_GAP)));
+        int listHeight = visibleRows * (ROW_HEIGHT + ROW_GAP) - ROW_GAP;
+        int y = Math.max(30, Math.min(LIST_TOP, controlsY - CONTROL_GAP - listHeight));
+        int maxFirst = Math.max(0, choices.size() - visibleRows);
+        if (firstVisible > maxFirst) firstVisible = maxFirst;
+        return new Layout(x, y, panelWidth, visibleRows, listHeight, controlsY);
     }
 
     private Component trim(Component text, int maxWidth) {
@@ -106,10 +114,10 @@ public final class PaintingSelectionScreen extends Screen {
         return Component.literal(value + ellipsis);
     }
 
-    private void drawScrollBar(GuiGraphicsExtractor graphics, int x, int y) {
-        int trackHeight = VISIBLE_ROWS * (ROW_HEIGHT + ROW_GAP) - ROW_GAP;
-        int thumbHeight = Math.max(18, trackHeight * VISIBLE_ROWS / choices.size());
-        int maxFirst = choices.size() - VISIBLE_ROWS;
+    private void drawScrollBar(GuiGraphicsExtractor graphics, int x, int y, int visibleRows) {
+        int trackHeight = visibleRows * (ROW_HEIGHT + ROW_GAP) - ROW_GAP;
+        int thumbHeight = Math.max(18, trackHeight * visibleRows / choices.size());
+        int maxFirst = choices.size() - visibleRows;
         int thumbY = y + (trackHeight - thumbHeight) * firstVisible / maxFirst;
         graphics.fill(x, y, x + 3, y + trackHeight, 0x44000000);
         graphics.fill(x, thumbY, x + 3, thumbY + thumbHeight, 0xAAFFFFFF);
@@ -133,5 +141,8 @@ public final class PaintingSelectionScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private record Layout(int x, int y, int panelWidth, int visibleRows, int listHeight, int controlsY) {
     }
 }
