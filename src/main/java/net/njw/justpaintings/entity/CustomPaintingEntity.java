@@ -26,6 +26,7 @@ import net.njw.justpaintings.item.PaintingItemData;
 import net.njw.justpaintings.registry.ModContent;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public final class CustomPaintingEntity extends HangingEntity {
@@ -81,6 +82,10 @@ public final class CustomPaintingEntity extends HangingEntity {
 
     public int getPaintingHeight() {
         return Math.clamp(entityData.get(HEIGHT), 1, 3);
+    }
+
+    public static BlockPos anchorFromTopLeft(BlockPos topLeft, Direction direction, int width, int height) {
+        return topLeft.relative(direction.getCounterClockWise(), (width - 1) / 2).below(height / 2);
     }
 
     @Override
@@ -158,12 +163,15 @@ public final class CustomPaintingEntity extends HangingEntity {
 
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
-        Direction direction = input.read("facing", Direction.LEGACY_ID_CODEC_2D).orElse(Direction.SOUTH);
+        Optional<Direction> storedFacing = input.read("facing", Direction.LEGACY_ID_CODEC_2D);
+        boolean legacyAnchor = storedFacing.isEmpty();
+        Direction direction = storedFacing.orElseGet(() -> Direction.from2DDataValue(Math.floorMod(input.getIntOr("PaintingFacing", Direction.SOUTH.get2DDataValue()), 4)));
         super.readAdditionalSaveData(input);
         entityData.set(IMAGE_ID, input.getStringOr("PaintingImageId", ""));
         entityData.set(FILE_NAME, input.getStringOr("PaintingFileName", ""));
         entityData.set(WIDTH, Math.clamp(input.getIntOr("PaintingWidth", 1), 1, 3));
         entityData.set(HEIGHT, Math.clamp(input.getIntOr("PaintingHeight", 1), 1, 3));
+        if (legacyAnchor) pos = anchorFromTopLeft(pos, direction, getPaintingWidth(), getPaintingHeight());
         setDirection(direction);
     }
 }
