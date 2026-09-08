@@ -25,6 +25,6 @@ public final class JustPaintings {
     private static void registerCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("paintings")
                 .then(Commands.literal("list")
-                        .executes(context -> PaintingUploadManager.list(context.getSource().getPlayerOrException()))));
+                        .executes(context -> PaintingUploadManager.openList(context.getSource().getPlayerOrException()))));
     }
 }
