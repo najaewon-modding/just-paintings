@@ -18,6 +18,7 @@ import net.njw.justpaintings.client.PaintingSelectionScreen;
 import net.njw.justpaintings.network.PaintingPayloads;
 import net.njw.justpaintings.network.UploadPayloads;
 import net.njw.justpaintings.registry.ModContent;
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import java.io.IOException;
@@ -57,6 +58,7 @@ public final class JustPaintingsClient {
 
     private static int openFilePicker(int width, int height) {
         String selected = TinyFileDialogs.tinyfd_openFileDialog(Component.translatable("dialog.njw_just_paintings.upload.title").getString(), null, null, null, false);
+        restoreMinecraftWindow();
         if (selected == null) return 1;
         Path path = Path.of(selected);
         Thread.startVirtualThread(() -> prepareUpload(path, width, height));
@@ -90,10 +92,19 @@ public final class JustPaintingsClient {
             ClientPacketDistributor.sendToServer(new UploadPayloads.UploadChunkPayload(uploadId, chunk));
         }
         ClientPacketDistributor.sendToServer(new UploadPayloads.UploadFinishPayload(uploadId));
+        restoreMinecraftWindow();
+    }
+
+    private static void restoreMinecraftWindow() {
+        Minecraft minecraft = Minecraft.getInstance();
+        long handle = minecraft.getWindow().handle();
+        GLFW.glfwRestoreWindow(handle);
+        GLFW.glfwFocusWindow(handle);
     }
 
     private static void showMessage(Component message) {
         Minecraft.getInstance().execute(() -> {
+            restoreMinecraftWindow();
             if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendSystemMessage(message);
         });
     }
