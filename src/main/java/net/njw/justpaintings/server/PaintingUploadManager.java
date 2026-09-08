@@ -114,7 +114,7 @@ public final class PaintingUploadManager {
         metadata.addProperty("originalFileName", session.fileName);
         metadata.addProperty("storedFileName", storedFileName);
         metadata.addProperty("uploaderUuid", player.getUUID().toString());
-        metadata.addProperty("uploaderName", player.getGameProfile().getName());
+        metadata.addProperty("uploaderName", player.getGameProfile().name());
         metadata.addProperty("paintingWidth", session.width);
         metadata.addProperty("paintingHeight", session.height);
         metadata.addProperty("sourceWidth", sourceWidth);
