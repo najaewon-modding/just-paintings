@@ -18,6 +18,7 @@
   "message.njw_just_paintings.delete.failed": "Failed to delete the image.",
   "message.njw_just_paintings.placement.failed": "The painting cannot be placed there.",
   "screen.njw_just_paintings.selection.title": "Select Painting",
+  "screen.njw_just_paintings.list.title": "Painting List",
   "screen.njw_just_paintings.selection.entry": "%s (%sx%s) - Uploader: %s",
   "screen.njw_just_paintings.selection.delete": "Delete",
   "command.njw_just_paintings.list.empty": "No images have been uploaded.",
