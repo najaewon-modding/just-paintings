@@ -38,12 +38,12 @@ public final class PaintingUploadManager {
     public static void handleStart(UploadPayloads.UploadStartPayload payload, IPayloadContext context) {
         ServerPlayer player = (ServerPlayer) context.player();
         if (payload.width() < 1 || payload.height() < 1 || payload.totalSize() < 1 || payload.totalSize() > UploadPayloads.MAX_UPLOAD_SIZE) {
-            player.sendSystemMessage(Component.literal("이미지 업로드 요청이 올바르지 않습니다."));
+            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.invalid_request"));
             return;
         }
         String fileName = sanitizeFileName(payload.fileName());
         if (fileName.isBlank()) {
-            player.sendSystemMessage(Component.literal("파일 이름이 올바르지 않습니다."));
+            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.invalid_filename"));
             return;
         }
         SESSIONS.entrySet().removeIf(entry -> entry.getKey().playerId().equals(player.getUUID()));
@@ -57,7 +57,7 @@ public final class PaintingUploadManager {
         if (session == null) return;
         if (payload.data().length > UploadPayloads.MAX_CHUNK_SIZE || !session.append(payload.data())) {
             SESSIONS.remove(key);
-            player.sendSystemMessage(Component.literal("이미지 업로드에 실패했습니다."));
+            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.failed"));
         }
     }
 
@@ -66,21 +66,60 @@ public final class PaintingUploadManager {
         UploadSession session = SESSIONS.remove(new UploadKey(player.getUUID(), payload.uploadId()));
         if (session == null) return;
         if (session.data.size() != session.totalSize) {
-            player.sendSystemMessage(Component.literal("이미지 업로드에 실패했습니다."));
+            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.failed"));
             return;
         }
         try {
             save(player, session);
-            player.sendSystemMessage(Component.literal(session.fileName + "이(가) 성공적으로 업로드 되었습니다"));
+            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.success", session.fileName));
         } catch (Exception e) {
-            player.sendSystemMessage(Component.literal("이미지 업로드에 실패했습니다: " + e.getMessage()));
+            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.failed"));
+        }
+    }
+
+    public static int list(ServerPlayer player) {
+        try {
+            MinecraftServer server = player.level().getServer();
+            Path root = server.getWorldPath(LevelResource.ROOT).resolve(JustPaintings.MOD_ID);
+            Path metadataPath = root.resolve("metadata.json");
+            if (!Files.exists(metadataPath)) {
+                player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.empty"));
+                return 0;
+            }
+            JsonArray entries;
+            try (var reader = Files.newBufferedReader(metadataPath, StandardCharsets.UTF_8)) {
+                JsonElement existing = JsonParser.parseReader(reader);
+                if (!existing.isJsonArray()) throw new IOException("Invalid metadata format");
+                entries = existing.getAsJsonArray();
+            }
+            if (entries.isEmpty()) {
+                player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.empty"));
+                return 0;
+            }
+            player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.header", entries.size()));
+            for (JsonElement element : entries) {
+                if (!element.isJsonObject()) continue;
+                JsonObject metadata = element.getAsJsonObject();
+                String originalFileName = stringValue(metadata, "originalFileName", "?");
+                String storedFileName = stringValue(metadata, "storedFileName", "");
+                String uploaderName = stringValue(metadata, "uploaderName", "?");
+                int width = intValue(metadata, "paintingWidth", 0);
+                int height = intValue(metadata, "paintingHeight", 0);
+                boolean stored = !storedFileName.isBlank() && Files.isRegularFile(root.resolve("images").resolve(storedFileName));
+                Component status = Component.translatable(stored ? "command.njw_just_paintings.list.status.stored" : "command.njw_just_paintings.list.status.missing");
+                player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.entry", originalFileName, width, height, uploaderName, status));
+            }
+            return entries.size();
+        } catch (Exception e) {
+            player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.failed"));
+            return 0;
         }
     }
 
     private static void save(ServerPlayer player, UploadSession session) throws IOException {
         byte[] bytes = session.data.toByteArray();
         BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
-        if (image == null) throw new IOException("지원되는 이미지 파일이 아닙니다.");
+        if (image == null) throw new IOException("Unsupported image file");
         MinecraftServer server = player.level().getServer();
         Path root = server.getWorldPath(LevelResource.ROOT).resolve(JustPaintings.MOD_ID);
         Path images = root.resolve("images");
@@ -89,14 +128,14 @@ public final class PaintingUploadManager {
         String storedFileName = imageId + ".png";
         Path imagePath = images.resolve(storedFileName);
         Path tempImagePath = images.resolve(storedFileName + ".tmp");
-        if (!ImageIO.write(image, "PNG", tempImagePath.toFile())) throw new IOException("이미지를 PNG로 저장할 수 없습니다.");
+        if (!ImageIO.write(image, "PNG", tempImagePath.toFile())) throw new IOException("Could not encode PNG");
         moveAtomically(tempImagePath, imagePath);
         try {
             appendMetadata(root.resolve("metadata.json"), imageId, storedFileName, session, player, image.getWidth(), image.getHeight());
         } catch (Exception e) {
             Files.deleteIfExists(imagePath);
             if (e instanceof IOException ioException) throw ioException;
-            throw new IOException("메타데이터를 저장할 수 없습니다.", e);
+            throw new IOException("Could not save metadata", e);
         }
     }
 
@@ -105,7 +144,7 @@ public final class PaintingUploadManager {
         if (Files.exists(metadataPath)) {
             try (var reader = Files.newBufferedReader(metadataPath, StandardCharsets.UTF_8)) {
                 JsonElement existing = JsonParser.parseReader(reader);
-                if (!existing.isJsonArray()) throw new IOException("metadata.json 형식이 올바르지 않습니다.");
+                if (!existing.isJsonArray()) throw new IOException("Invalid metadata format");
                 entries = existing.getAsJsonArray();
             }
         }
@@ -139,6 +178,16 @@ public final class PaintingUploadManager {
         String normalized = fileName.replace('\\', '/');
         int slash = normalized.lastIndexOf('/');
         return (slash >= 0 ? normalized.substring(slash + 1) : normalized).strip();
+    }
+
+    private static String stringValue(JsonObject object, String key, String fallback) {
+        JsonElement value = object.get(key);
+        return value != null && value.isJsonPrimitive() ? value.getAsString() : fallback;
+    }
+
+    private static int intValue(JsonObject object, String key, int fallback) {
+        JsonElement value = object.get(key);
+        return value != null && value.isJsonPrimitive() ? value.getAsInt() : fallback;
     }
 
     private record UploadKey(UUID playerId, UUID uploadId) {
