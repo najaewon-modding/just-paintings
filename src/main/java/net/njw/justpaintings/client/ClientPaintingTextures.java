@@ -62,6 +62,13 @@ public final class ClientPaintingTextures {
         }
     }
 
+    public static void remove(PaintingPayloads.ImageRemovedPayload payload) {
+        DOWNLOADS.remove(payload.imageId());
+        REQUESTED.add(payload.imageId());
+        Identifier texture = TEXTURES.remove(payload.imageId());
+        if (texture != null) Minecraft.getInstance().getTextureManager().release(texture);
+    }
+
     private static final class Download {
         private final int totalSize;
         private final ByteArrayOutputStream data;
