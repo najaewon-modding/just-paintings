@@ -11,6 +11,7 @@
   "message.njw_just_paintings.upload.prepare_failed": "이미지 업로드를 준비하는 중 오류가 발생했습니다.",
   "message.njw_just_paintings.selection.success": "적용 완료 : %s",
   "message.njw_just_paintings.selection.failed": "그림을 선택할 수 없습니다.",
+  "message.njw_just_paintings.placement.failed": "그곳에는 설치할 수 없습니다.",
   "screen.njw_just_paintings.selection.title": "그림 선택",
   "screen.njw_just_paintings.selection.entry": "%s (%sx%s) - 업로더: %s",
   "screen.njw_just_paintings.selection.previous": "이전",
