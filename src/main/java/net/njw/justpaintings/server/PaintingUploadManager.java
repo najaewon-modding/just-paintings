@@ -46,7 +46,7 @@ public final class PaintingUploadManager {
     private static final Map<UploadKey, UploadSession> SESSIONS = new HashMap<>();
     private static final int MAX_UPLOADS_PER_PLAYER = 10;
     private static final int MAX_UPLOADS_SERVER = 100;
-    private static final int MAX_STORED_IMAGE_DIMENSION = 4096;
+    private static final int MAX_STORED_IMAGE_DIMENSION = 2048;
 
     private PaintingUploadManager() {
     }
@@ -186,7 +186,7 @@ public final class PaintingUploadManager {
             if (painting == null || !painting.stored()) return;
             Path imagePath = imagePath(root(player.level().getServer()), painting.storedFileName());
             byte[] data = Files.readAllBytes(imagePath);
-            if (data.length < 1 || data.length > UploadPayloads.MAX_UPLOAD_SIZE) return;
+            if (data.length < 1 || data.length > PaintingPayloads.MAX_IMAGE_SIZE) return;
             PacketDistributor.sendToPlayer(player, new PaintingPayloads.ImageStartPayload(painting.id(), data.length));
             for (int offset = 0; offset < data.length; offset += PaintingPayloads.MAX_IMAGE_CHUNK_SIZE) {
                 byte[] chunk = Arrays.copyOfRange(data, offset, Math.min(offset + PaintingPayloads.MAX_IMAGE_CHUNK_SIZE, data.length));
