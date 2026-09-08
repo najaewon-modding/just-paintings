@@ -26,7 +26,7 @@ public final class PaintingSelectionScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        extractBackground(graphics, mouseX, mouseY, partialTick);
+        graphics.fill(0, 0, width, height, 0x66000000);
         int panelWidth = Math.min(380, width - 40);
         int x = (width - panelWidth) / 2;
         int y = Math.max(38, height / 2 - 105);
