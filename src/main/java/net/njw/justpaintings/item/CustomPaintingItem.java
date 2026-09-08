@@ -72,17 +72,12 @@ public final class CustomPaintingItem extends Item {
                 int shiftLeft = distance - shiftUp;
                 if (shiftLeft >= selection.width()) continue;
                 BlockPos topLeft = clickedTopLeft.above(shiftUp).relative(screenLeft, shiftLeft);
-                BlockPos anchor = anchorFromTopLeft(topLeft, face, selection.width(), selection.height());
+                BlockPos anchor = CustomPaintingEntity.anchorFromTopLeft(topLeft, face, selection.width(), selection.height());
                 if (!player.mayUseItemAt(anchor, face, stack)) continue;
                 CustomPaintingEntity candidate = new CustomPaintingEntity(level, anchor, face, selection);
                 if (candidate.survives()) return candidate;
             }
         }
         return null;
-    }
-
-    private static BlockPos anchorFromTopLeft(BlockPos topLeft, Direction face, int width, int height) {
-        Direction screenRight = face.getCounterClockWise();
-        return topLeft.relative(screenRight, (width - 1) / 2).below(height / 2);
     }
 }
