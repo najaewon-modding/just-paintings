@@ -40,6 +40,8 @@ import java.util.UUID;
 public final class PaintingUploadManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Map<UploadKey, UploadSession> SESSIONS = new HashMap<>();
+    private static final int MAX_UPLOADS_PER_PLAYER = 10;
+    private static final int MAX_UPLOADS_SERVER = 100;
 
     private PaintingUploadManager() {
     }
@@ -57,6 +59,16 @@ public final class PaintingUploadManager {
         String fileName = sanitizeFileName(payload.fileName());
         if (fileName.isBlank()) {
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.invalid_filename"));
+            return;
+        }
+        try {
+            UploadLimit limit = getUploadLimit(player);
+            if (limit != null) {
+                player.sendSystemMessage(Component.translatable(limit.translationKey(), limit.maximum()));
+                return;
+            }
+        } catch (IOException e) {
+            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.failed"));
             return;
         }
         SESSIONS.entrySet().removeIf(entry -> entry.getKey().playerId().equals(player.getUUID()));
@@ -83,6 +95,11 @@ public final class PaintingUploadManager {
             return;
         }
         try {
+            UploadLimit limit = getUploadLimit(player);
+            if (limit != null) {
+                player.sendSystemMessage(Component.translatable(limit.translationKey(), limit.maximum()));
+                return;
+            }
             String displayFileName = save(player, session);
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.success", displayFileName));
         } catch (Exception e) {
@@ -176,6 +193,24 @@ public final class PaintingUploadManager {
             player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.failed"));
             return 0;
         }
+    }
+
+    public static boolean isImageStored(MinecraftServer server, UUID imageId) {
+        try {
+            StoredPainting painting = findPainting(server, imageId);
+            return painting != null && painting.stored();
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private static UploadLimit getUploadLimit(ServerPlayer player) throws IOException {
+        List<StoredPainting> paintings = readPaintings(player.level().getServer());
+        long playerCount = paintings.stream().filter(StoredPainting::stored).filter(p -> player.getUUID().toString().equals(p.uploaderUuid())).count();
+        if (playerCount >= MAX_UPLOADS_PER_PLAYER) return new UploadLimit("message.njw_just_paintings.upload.limit.player", MAX_UPLOADS_PER_PLAYER);
+        long serverCount = paintings.stream().filter(StoredPainting::stored).count();
+        if (serverCount >= MAX_UPLOADS_SERVER) return new UploadLimit("message.njw_just_paintings.upload.limit.server", MAX_UPLOADS_SERVER);
+        return null;
     }
 
     private static String save(ServerPlayer player, UploadSession session) throws IOException {
@@ -319,6 +354,9 @@ public final class PaintingUploadManager {
     }
 
     private record UploadKey(UUID playerId, UUID uploadId) {
+    }
+
+    private record UploadLimit(String translationKey, int maximum) {
     }
 
     private static final class UploadSession {
