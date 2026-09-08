@@ -11,6 +11,7 @@
   "message.njw_just_paintings.upload.prepare_failed": "An error occurred while preparing the image upload.",
   "message.njw_just_paintings.selection.success": "Applied: %s",
   "message.njw_just_paintings.selection.failed": "Could not select the painting.",
+  "message.njw_just_paintings.placement.failed": "The painting cannot be placed there.",
   "screen.njw_just_paintings.selection.title": "Select Painting",
   "screen.njw_just_paintings.selection.entry": "%s (%sx%s) - Uploader: %s",
   "screen.njw_just_paintings.selection.previous": "Previous",
