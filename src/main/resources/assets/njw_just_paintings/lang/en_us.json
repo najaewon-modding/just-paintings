@@ -1,0 +1,15 @@
+{
+  "message.njw_just_paintings.upload.invalid_request": "The image upload request is invalid.",
+  "message.njw_just_paintings.upload.invalid_filename": "The file name is invalid.",
+  "message.njw_just_paintings.upload.failed": "Failed to upload the image.",
+  "message.njw_just_paintings.upload.success": "%s was uploaded successfully.",
+  "message.njw_just_paintings.upload.file_unreadable": "The selected file could not be read.",
+  "message.njw_just_paintings.upload.file_too_large": "The image file must be %s MiB or smaller.",
+  "message.njw_just_paintings.upload.prepare_failed": "An error occurred while preparing the image upload.",
+  "command.njw_just_paintings.list.empty": "No images have been uploaded.",
+  "command.njw_just_paintings.list.header": "Uploaded images: %s",
+  "command.njw_just_paintings.list.entry": "- %s (%sx%s) - Uploader: %s - Status: %s",
+  "command.njw_just_paintings.list.status.stored": "OK",
+  "command.njw_just_paintings.list.status.missing": "File missing",
+  "command.njw_just_paintings.list.failed": "Failed to read the uploaded image list."
+}
