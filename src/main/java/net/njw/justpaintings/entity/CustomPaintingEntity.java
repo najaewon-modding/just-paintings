@@ -2,16 +2,22 @@ package net.njw.justpaintings.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.HangingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
@@ -30,10 +36,12 @@ public final class CustomPaintingEntity extends HangingEntity {
 
     public CustomPaintingEntity(EntityType<? extends CustomPaintingEntity> type, Level level) {
         super(type, level);
+        blocksBuilding = true;
     }
 
     public CustomPaintingEntity(Level level, BlockPos topLeft, Direction direction, PaintingItemData.Selection selection) {
         super(ModContent.CUSTOM_PAINTING_ENTITY.get(), level, topLeft);
+        blocksBuilding = true;
         entityData.set(IMAGE_ID, selection.imageId().toString());
         entityData.set(FILE_NAME, selection.fileName());
         entityData.set(WIDTH, selection.width());
@@ -117,10 +125,33 @@ public final class CustomPaintingEntity extends HangingEntity {
 
     @Override
     public void dropItem(ServerLevel level, @Nullable Entity breaker) {
+        if (!level.getGameRules().get(GameRules.ENTITY_DROPS)) return;
         playSound(SoundEvents.PAINTING_BREAK, 1.0F, 1.0F);
+        if (breaker instanceof Player player && player.hasInfiniteMaterials()) return;
         ItemStack stack = new ItemStack(ModContent.CUSTOM_PAINTING.get());
         PaintingItemData.set(stack, getImageId(), getFileName(), getPaintingWidth(), getPaintingHeight());
         spawnAtLocation(level, stack, 0.0F);
+    }
+
+    @Override
+    public void snapTo(double x, double y, double z, float yRot, float xRot) {
+        setPos(x, y, z);
+    }
+
+    @Override
+    public Vec3 trackingPosition() {
+        return Vec3.atLowerCornerOf(pos);
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getAddEntityPacket(ServerEntity serverEntity) {
+        return new ClientboundAddEntityPacket(this, getDirection().get3DDataValue(), getPos());
+    }
+
+    @Override
+    public void recreateFromPacket(ClientboundAddEntityPacket packet) {
+        super.recreateFromPacket(packet);
+        setDirection(Direction.from3DDataValue(packet.getData()));
     }
 
     @Override
