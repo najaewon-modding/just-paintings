@@ -1,0 +1,15 @@
+{
+  "message.njw_just_paintings.upload.invalid_request": "이미지 업로드 요청이 올바르지 않습니다.",
+  "message.njw_just_paintings.upload.invalid_filename": "파일 이름이 올바르지 않습니다.",
+  "message.njw_just_paintings.upload.failed": "이미지 업로드에 실패했습니다.",
+  "message.njw_just_paintings.upload.success": "%s이(가) 성공적으로 업로드되었습니다.",
+  "message.njw_just_paintings.upload.file_unreadable": "선택한 파일을 읽을 수 없습니다.",
+  "message.njw_just_paintings.upload.file_too_large": "이미지 파일은 %s MiB 이하여야 합니다.",
+  "message.njw_just_paintings.upload.prepare_failed": "이미지 업로드를 준비하는 중 오류가 발생했습니다.",
+  "command.njw_just_paintings.list.empty": "업로드된 이미지가 없습니다.",
+  "command.njw_just_paintings.list.header": "업로드된 이미지: %s개",
+  "command.njw_just_paintings.list.entry": "- %s (%sx%s) - 업로더: %s - 상태: %s",
+  "command.njw_just_paintings.list.status.stored": "정상",
+  "command.njw_just_paintings.list.status.missing": "파일 없음",
+  "command.njw_just_paintings.list.failed": "업로드된 이미지 목록을 읽는 데 실패했습니다."
+}
