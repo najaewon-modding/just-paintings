@@ -46,7 +46,7 @@ public final class JustPaintingsClient {
     }
 
     private static void registerPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
-        event.register(PaintingPayloads.PaintingChoicesPayload.TYPE, (payload, context) -> Minecraft.getInstance().setScreen(new PaintingSelectionScreen(payload.hand(), payload.choices())));
+        event.register(PaintingPayloads.PaintingChoicesPayload.TYPE, (payload, context) -> Minecraft.getInstance().setScreen(new PaintingSelectionScreen(payload.hand(), payload.selectable(), payload.choices())));
         event.register(PaintingPayloads.ImageStartPayload.TYPE, (payload, context) -> ClientPaintingTextures.start(payload));
         event.register(PaintingPayloads.ImageChunkPayload.TYPE, (payload, context) -> ClientPaintingTextures.chunk(payload));
         event.register(PaintingPayloads.ImageFinishPayload.TYPE, (payload, context) -> ClientPaintingTextures.finish(payload));
