@@ -149,7 +149,7 @@ public final class PaintingUploadManager {
             player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.header", paintings.size()));
             for (StoredPainting painting : paintings) {
                 Component status = Component.translatable(painting.stored() ? "command.njw_just_paintings.list.status.stored" : "command.njw_just_paintings.list.status.missing");
-                player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.entry", painting.fileName(), painting.width(), painting.height(), painting.uploader(), status));
+                player.sendSystemMessage(Component.translatable("command.njw_just_paintings.list.entry", painting.fileName(), painting.height(), painting.width(), painting.uploader(), status));
             }
             return paintings.size();
         } catch (Exception e) {
