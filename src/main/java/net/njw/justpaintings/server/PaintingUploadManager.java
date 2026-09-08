@@ -8,7 +8,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -16,7 +15,6 @@ import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.njw.justpaintings.JustPaintings;
-import net.njw.justpaintings.entity.CustomPaintingEntity;
 import net.njw.justpaintings.item.PaintingItemData;
 import net.njw.justpaintings.network.PaintingPayloads;
 import net.njw.justpaintings.network.UploadPayloads;
@@ -133,11 +131,6 @@ public final class PaintingUploadManager {
                 sendChoices(player, hand);
                 return;
             }
-            if (isImageInUse(player.level().getServer(), painting.id())) {
-                player.sendSystemMessage(Component.translatable("message.njw_just_paintings.delete.in_use"));
-                sendChoices(player, hand);
-                return;
-            }
             deletePainting(player.level().getServer(), painting.id(), painting.storedFileName());
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.delete.success", painting.displayFileName()));
             sendChoices(player, hand);
@@ -240,15 +233,6 @@ public final class PaintingUploadManager {
     private static StoredPainting findPainting(MinecraftServer server, UUID id) throws IOException {
         for (StoredPainting painting : readPaintings(server)) if (painting.id().equals(id)) return painting;
         return null;
-    }
-
-    private static boolean isImageInUse(MinecraftServer server, UUID imageId) {
-        for (ServerLevel level : server.getAllLevels()) {
-            for (var entity : level.getAllEntities()) {
-                if (entity instanceof CustomPaintingEntity painting && painting.isAlive() && painting.getImageId().equals(imageId)) return true;
-            }
-        }
-        return false;
     }
 
     private static void deletePainting(MinecraftServer server, UUID id, String storedFileName) throws IOException {
