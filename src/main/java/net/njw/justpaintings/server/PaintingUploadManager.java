@@ -83,8 +83,8 @@ public final class PaintingUploadManager {
             return;
         }
         try {
-            save(player, session);
-            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.success", session.fileName));
+            String displayFileName = save(player, session);
+            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.success", displayFileName));
         } catch (Exception e) {
             player.sendSystemMessage(Component.translatable("message.njw_just_paintings.upload.failed"));
         }
@@ -177,7 +177,7 @@ public final class PaintingUploadManager {
         }
     }
 
-    private static void save(ServerPlayer player, UploadSession session) throws IOException {
+    private static String save(ServerPlayer player, UploadSession session) throws IOException {
         byte[] bytes = session.data.toByteArray();
         BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
         if (image == null) throw new IOException("Unsupported image file");
@@ -192,6 +192,8 @@ public final class PaintingUploadManager {
         moveAtomically(tempImagePath, imagePath);
         try {
             appendMetadata(root.resolve("metadata.json"), imageId, storedFileName, session, player, image.getWidth(), image.getHeight());
+            StoredPainting storedPainting = findPainting(player.level().getServer(), imageId);
+            return storedPainting != null ? storedPainting.displayFileName() : session.fileName;
         } catch (Exception e) {
             Files.deleteIfExists(imagePath);
             if (e instanceof IOException ioException) throw ioException;
