@@ -11,8 +11,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.njw.justpaintings.entity.CustomPaintingEntity;
 import net.njw.justpaintings.server.PaintingUploadManager;
+import org.jspecify.annotations.Nullable;
 
 public final class CustomPaintingItem extends Item {
     public CustomPaintingItem(Properties properties) {
@@ -44,27 +46,36 @@ public final class CustomPaintingItem extends Item {
             return InteractionResult.SUCCESS;
         }
         Direction face = context.getClickedFace();
-        if (face.getAxis() == Direction.Axis.Y) return InteractionResult.FAIL;
+        if (face.getAxis().isVertical()) return InteractionResult.FAIL;
         PaintingItemData.Selection selection = PaintingItemData.get(stack);
         if (selection == null) return InteractionResult.FAIL;
         if (!(context.getLevel() instanceof ServerLevel level)) return InteractionResult.SUCCESS;
-        BlockPos initialTopLeft = context.getClickedPos().relative(face);
-        Direction left = face.getClockWise();
-        int maxShift = selection.width() + selection.height() - 2;
-        for (int totalShift = 0; totalShift <= maxShift; totalShift++) {
-            for (int shiftUp = 0; shiftUp < selection.height(); shiftUp++) {
-                int shiftLeft = totalShift - shiftUp;
-                if (shiftLeft < 0 || shiftLeft >= selection.width()) continue;
-                BlockPos candidate = initialTopLeft.above(shiftUp).relative(left, shiftLeft);
-                CustomPaintingEntity entity = new CustomPaintingEntity(level, candidate, face, selection);
-                if (!entity.survives()) continue;
-                entity.playPlacementSound();
-                level.addFreshEntity(entity);
-                if (!player.getAbilities().instabuild) stack.shrink(1);
-                return InteractionResult.SUCCESS_SERVER;
+        BlockPos clickedTopLeft = context.getClickedPos().relative(face);
+        CustomPaintingEntity entity = findPlacement(level, clickedTopLeft, face, selection);
+        if (entity == null) {
+            player.sendSystemMessage(Component.translatable("message.njw_just_paintings.placement.failed"));
+            return InteractionResult.FAIL;
+        }
+        entity.playPlacementSound();
+        level.gameEvent(player, GameEvent.ENTITY_PLACE, entity.position());
+        level.addFreshEntity(entity);
+        if (!player.getAbilities().instabuild) stack.shrink(1);
+        return InteractionResult.SUCCESS_SERVER;
+    }
+
+    private static @Nullable CustomPaintingEntity findPlacement(ServerLevel level, BlockPos clickedTopLeft, Direction face, PaintingItemData.Selection selection) {
+        Direction left = face.getCounterClockWise().getOpposite();
+        int maxDistance = selection.width() + selection.height() - 2;
+        for (int distance = 0; distance <= maxDistance; distance++) {
+            int maxUp = Math.min(distance, selection.height() - 1);
+            for (int shiftUp = maxUp; shiftUp >= 0; shiftUp--) {
+                int shiftLeft = distance - shiftUp;
+                if (shiftLeft >= selection.width()) continue;
+                BlockPos topLeft = clickedTopLeft.above(shiftUp).relative(left, shiftLeft);
+                CustomPaintingEntity candidate = new CustomPaintingEntity(level, topLeft, face, selection);
+                if (candidate.survives()) return candidate;
             }
         }
-        player.sendSystemMessage(Component.translatable("message.njw_just_paintings.placement.failed"));
-        return InteractionResult.FAIL;
+        return null;
     }
 }
