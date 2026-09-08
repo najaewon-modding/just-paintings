@@ -75,7 +75,7 @@ public final class CustomPaintingRenderer extends EntityRenderer<CustomPaintingE
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - state.direction.get2DDataValue() * 90.0F));
         collector.submitCustomGeometry(poseStack, RenderTypes.entitySolidZOffsetForward(backSprite.atlasLocation()), (pose, buffer) -> renderBackEdgesAndFrame(pose, buffer, state.lightCoordsPerBlock, state.width, state.height, backSprite));
-        collector.submitCustomGeometry(poseStack, RenderTypes.entitySolidZOffsetForward(frontTexture), (pose, buffer) -> renderFront(pose, buffer, state.lightCoordsPerBlock, state.width, state.height));
+        if (frontTexture != null) collector.submitCustomGeometry(poseStack, RenderTypes.entitySolidZOffsetForward(frontTexture), (pose, buffer) -> renderFront(pose, buffer, state.lightCoordsPerBlock, state.width, state.height));
         poseStack.popPose();
         super.submit(state, poseStack, collector, cameraState);
     }
