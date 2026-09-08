@@ -96,14 +96,18 @@ public final class CustomPaintingEntity extends HangingEntity {
         if (direction.getAxis() == Direction.Axis.Y) return false;
         Direction right = direction.getCounterClockWise();
         BlockPos topLeft = getPos();
+        boolean hasSupport = false;
         for (int y = 0; y < getPaintingHeight(); y++) {
             for (int x = 0; x < getPaintingWidth(); x++) {
                 BlockPos front = topLeft.relative(right, x).below(y);
                 BlockPos support = front.relative(direction.getOpposite());
-                if (!level().getBlockState(front).isAir() || level().getBlockState(support).isAir()) return false;
+                if (!level().getBlockState(front).isAir()) return false;
+                if (!level().getBlockState(support).isAir()) hasSupport = true;
             }
         }
-        return true;
+        if (!hasSupport) return false;
+        AABB box = getBoundingBox().deflate(1.0E-4);
+        return level().getEntities(this, box).stream().noneMatch(entity -> entity instanceof HangingEntity);
     }
 
     @Override
