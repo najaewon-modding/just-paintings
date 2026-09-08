@@ -23,23 +23,25 @@ public final class PaintingPayloads {
         PayloadRegistrar registrar = event.registrar("1");
         registrar.playToClient(PaintingChoicesPayload.TYPE, PaintingChoicesPayload.STREAM_CODEC);
         registrar.playToServer(SelectPaintingPayload.TYPE, SelectPaintingPayload.STREAM_CODEC, PaintingUploadManager::handleSelection);
+        registrar.playToServer(DeletePaintingPayload.TYPE, DeletePaintingPayload.STREAM_CODEC, PaintingUploadManager::handleDeletion);
         registrar.playToServer(RequestImagePayload.TYPE, RequestImagePayload.STREAM_CODEC, PaintingUploadManager::handleImageRequest);
         registrar.playToClient(ImageStartPayload.TYPE, ImageStartPayload.STREAM_CODEC);
         registrar.playToClient(ImageChunkPayload.TYPE, ImageChunkPayload.STREAM_CODEC);
         registrar.playToClient(ImageFinishPayload.TYPE, ImageFinishPayload.STREAM_CODEC);
     }
 
-    public record Choice(UUID id, String fileName, int width, int height, String uploader) {
+    public record Choice(UUID id, String fileName, int width, int height, String uploader, boolean deletable) {
         private static void encode(RegistryFriendlyByteBuf buffer, Choice choice) {
             buffer.writeUUID(choice.id);
             buffer.writeUtf(choice.fileName, 255);
             buffer.writeVarInt(choice.width);
             buffer.writeVarInt(choice.height);
             buffer.writeUtf(choice.uploader, 255);
+            buffer.writeBoolean(choice.deletable);
         }
 
         private static Choice decode(RegistryFriendlyByteBuf buffer) {
-            return new Choice(buffer.readUUID(), buffer.readUtf(255), buffer.readVarInt(), buffer.readVarInt(), buffer.readUtf(255));
+            return new Choice(buffer.readUUID(), buffer.readUtf(255), buffer.readVarInt(), buffer.readVarInt(), buffer.readUtf(255), buffer.readBoolean());
         }
     }
 
@@ -76,6 +78,19 @@ public final class PaintingPayloads {
 
         @Override
         public Type<SelectPaintingPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record DeletePaintingPayload(int hand, UUID imageId) implements CustomPacketPayload {
+        public static final Type<DeletePaintingPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(JustPaintings.MOD_ID, "delete_painting"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, DeletePaintingPayload> STREAM_CODEC = StreamCodec.of((buffer, payload) -> {
+            buffer.writeByte(payload.hand);
+            buffer.writeUUID(payload.imageId);
+        }, buffer -> new DeletePaintingPayload(buffer.readUnsignedByte(), buffer.readUUID()));
+
+        @Override
+        public Type<DeletePaintingPayload> type() {
             return TYPE;
         }
     }
