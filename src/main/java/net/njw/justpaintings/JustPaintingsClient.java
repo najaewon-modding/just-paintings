@@ -37,11 +37,11 @@ public final class JustPaintingsClient {
     private static void registerCommands(RegisterClientCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("paintings")
                 .then(Commands.literal("upload")
-                        .then(Commands.argument("width", IntegerArgumentType.integer(1, 3))
-                                .then(Commands.argument("height", IntegerArgumentType.integer(1, 3))
+                        .then(Commands.argument("height", IntegerArgumentType.integer(1, 3))
+                                .then(Commands.argument("width", IntegerArgumentType.integer(1, 3))
                                         .executes(context -> openFilePicker(
-                                                IntegerArgumentType.getInteger(context, "width"),
-                                                IntegerArgumentType.getInteger(context, "height")))))));
+                                                IntegerArgumentType.getInteger(context, "height"),
+                                                IntegerArgumentType.getInteger(context, "width")))))));
     }
 
     private static void registerPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
@@ -55,7 +55,7 @@ public final class JustPaintingsClient {
         event.registerEntityRenderer(ModContent.CUSTOM_PAINTING_ENTITY.get(), CustomPaintingRenderer::new);
     }
 
-    private static int openFilePicker(int width, int height) {
+    private static int openFilePicker(int height, int width) {
         String selected = TinyFileDialogs.tinyfd_openFileDialog(Component.translatable("dialog.njw_just_paintings.upload.title").getString(), null, null, null, false);
         if (selected == null) return 1;
         Path path = Path.of(selected);
