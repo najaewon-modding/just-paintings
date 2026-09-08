@@ -1,6 +1,5 @@
 {
   "item.njw_just_paintings.custom_painting": "Custom Painting",
-  "item.njw_just_paintings.custom_painting.image": "Image: %s",
   "dialog.njw_just_paintings.upload.title": "Select painting image",
   "message.njw_just_paintings.upload.invalid_request": "The image upload request is invalid.",
   "message.njw_just_paintings.upload.invalid_dimensions": "Paintings can be at most 3x3 blocks.",
@@ -14,7 +13,6 @@
   "message.njw_just_paintings.selection.failed": "Could not select the painting.",
   "message.njw_just_paintings.delete.success": "Deleted %s.",
   "message.njw_just_paintings.delete.denied": "You can only delete images you uploaded.",
-  "message.njw_just_paintings.delete.in_use": "Images currently displayed in frames cannot be deleted.",
   "message.njw_just_paintings.delete.failed": "Failed to delete the image.",
   "message.njw_just_paintings.placement.failed": "The painting cannot be placed there.",
   "screen.njw_just_paintings.selection.title": "Select Painting",
