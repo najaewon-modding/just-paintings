@@ -2,6 +2,7 @@ package net.njw.justpaintings.item;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -49,9 +50,12 @@ public final class CustomPaintingItem extends Item {
         if (!(context.getLevel() instanceof ServerLevel level)) return InteractionResult.SUCCESS;
         BlockPos initialTopLeft = context.getClickedPos().relative(face);
         Direction left = face.getClockWise();
-        for (int down = 0; down < selection.height(); down++) {
-            for (int shiftLeft = 0; shiftLeft < selection.width(); shiftLeft++) {
-                BlockPos candidate = initialTopLeft.below(down).relative(left, shiftLeft);
+        int maxShift = selection.width() + selection.height() - 2;
+        for (int totalShift = 0; totalShift <= maxShift; totalShift++) {
+            for (int shiftUp = 0; shiftUp < selection.height(); shiftUp++) {
+                int shiftLeft = totalShift - shiftUp;
+                if (shiftLeft < 0 || shiftLeft >= selection.width()) continue;
+                BlockPos candidate = initialTopLeft.above(shiftUp).relative(left, shiftLeft);
                 CustomPaintingEntity entity = new CustomPaintingEntity(level, candidate, face, selection);
                 if (!entity.survives()) continue;
                 entity.playPlacementSound();
@@ -60,6 +64,7 @@ public final class CustomPaintingItem extends Item {
                 return InteractionResult.SUCCESS_SERVER;
             }
         }
+        player.sendSystemMessage(Component.translatable("message.njw_just_paintings.placement.failed"));
         return InteractionResult.FAIL;
     }
 }
