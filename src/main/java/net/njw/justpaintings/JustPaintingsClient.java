@@ -66,7 +66,7 @@ public final class JustPaintingsClient {
 
     private static void showMessage(String message) {
         Minecraft.getInstance().execute(() -> {
-            if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.displayClientMessage(Component.literal(message), false);
+            if (Minecraft.getInstance().player != null) Minecraft.getInstance().player.sendSystemMessage(Component.literal(message));
         });
     }
 }
