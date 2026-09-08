@@ -9,6 +9,8 @@
   "message.njw_just_paintings.upload.file_unreadable": "선택한 파일을 읽을 수 없습니다.",
   "message.njw_just_paintings.upload.file_too_large": "이미지 파일은 %s MiB 이하여야 합니다.",
   "message.njw_just_paintings.upload.prepare_failed": "이미지 업로드를 준비하는 중 오류가 발생했습니다.",
+  "message.njw_just_paintings.upload.limit.player": "이미지는 플레이어당 최대 %s개까지 업로드할 수 있습니다.",
+  "message.njw_just_paintings.upload.limit.server": "서버에는 이미지를 최대 %s개까지 업로드할 수 있습니다.",
   "message.njw_just_paintings.selection.success": "적용 완료 : %s",
   "message.njw_just_paintings.selection.failed": "그림을 선택할 수 없습니다.",
   "message.njw_just_paintings.delete.success": "%s을(를) 삭제했습니다.",
